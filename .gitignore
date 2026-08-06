@@ -1,0 +1,16 @@
+# Projet Xcode généré par XcodeGen — ne pas versionner
+*.xcodeproj
+*.xcworkspace
+
+# Plist généré
+Support/
+
+# Artefacts de compilation
+build/
+DerivedData/
+Payload/
+*.ipa
+*.dSYM.zip
+
+# macOS
+.DS_Store
