@@ -221,7 +221,7 @@ struct SettingsView: View {
     private var customSourcesCard: some View {
         card {
             SectionHeader(title: "Sources",
-                          subtitle: "\(catalog.allReciters.count) récitateurs prêts en un appui")
+                           subtitle: "\(catalog.custom.count) source\(catalog.custom.count > 1 ? "s" : "") personnalisée\(catalog.custom.count > 1 ? "s" : "")")
 
             // Voie principale : aucune adresse à saisir.
             Button {
@@ -310,7 +310,8 @@ struct SettingsView: View {
 
     private var networkCard: some View {
         card {
-            SectionHeader(title: "Réseau")
+            SectionHeader(title: "Téléchargements",
+                          subtitle: "Contrôle l'utilisation de ton forfait")
 
             Toggle(isOn: Binding(
                 get: { downloads.wifiOnly },
@@ -332,6 +333,11 @@ struct SettingsView: View {
                     .font(Theme.ui(11, .medium))
                     .foregroundStyle(Theme.teal)
             }
+
+            Text("La lecture en streaming utilise la connexion disponible. Les sourates téléchargées restent accessibles sans réseau.")
+                .font(Theme.ui(10.5, .regular))
+                .foregroundStyle(Theme.faint)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -348,7 +354,10 @@ struct SettingsView: View {
             Button {
                 confirmWipe = true
             } label: {
-                Text("Supprimer tout l'audio")
+                HStack(spacing: 7) {
+                    Image(systemName: "trash")
+                    Text("Supprimer tout l'audio")
+                }
                     .font(Theme.ui(13, .semibold))
                     .foregroundStyle(Theme.danger)
                     .frame(maxWidth: .infinity)

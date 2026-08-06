@@ -196,6 +196,14 @@ final class PlayerService: NSObject, ObservableObject {
 
     func togglePlayPause() { isPlaying ? pause() : play() }
 
+    /// Relance la piste courante après une erreur réseau ou un fichier local
+    /// devenu illisible. L'écran de lecture peut ainsi proposer une action
+    /// concrète au lieu de laisser l'utilisateur bloqué sur un message.
+    func retry() {
+        guard let current else { return }
+        start(current)
+    }
+
     func stop() {
         teardownObservers()
         player?.pause()

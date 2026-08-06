@@ -9,6 +9,7 @@ struct NowPlayingView: View {
     @EnvironmentObject private var player: PlayerService
     @EnvironmentObject private var downloads: DownloadManager
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var halo = false
     @State private var dragOffset: CGFloat = 0
@@ -42,6 +43,7 @@ struct NowPlayingView: View {
         .statusBarHidden(false)
         .presentationBackground(.clear)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 4.5).repeatForever(autoreverses: true)) {
                 halo = true
             }
@@ -56,14 +58,17 @@ struct NowPlayingView: View {
     private func content(_ track: Track, in size: CGSize) -> some View {
         let h = size.height
         let tight = h < 700
-        let art = min(size.width * 0.70, max(h * 0.30, 132))
-        let gap: CGFloat = tight ? 8 : 16
+        let compact = h < 760
+        // La scène centrale garde une taille généreuse, mais ne peut plus
+        // consommer l'espace réservé aux contrôles sur un petit iPhone.
+        let art = min(size.width * 0.62, compact ? max(h * 0.20, 132) : h * 0.25)
+        let gap: CGFloat = compact ? 8 : 14
 
         VStack(spacing: 0) {
             closeBar
                 .gesture(dismissDrag)
 
-            Spacer(minLength: tight ? 2 : 6)
+            Spacer(minLength: compact ? 2 : 6)
 
             artworkStage(for: track, side: art)
                 .gesture(dismissDrag)
@@ -75,16 +80,16 @@ struct NowPlayingView: View {
 
             Spacer(minLength: gap)
 
-            VStack(spacing: tight ? 12 : 16) {
+            VStack(spacing: compact ? 11 : 15) {
                 scrubber(tight: tight)
                 transport(tight: tight)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, tight ? 12 : 15)
+            .padding(.vertical, compact ? 11 : 14)
             .glass(radius: 26, elevation: 0.8)
             .padding(.horizontal, 14)
 
-            Spacer(minLength: tight ? 10 : 18)
+            Spacer(minLength: compact ? 9 : 16)
 
             secondaryBar(for: track)
                 .padding(.horizontal, 14)
@@ -95,8 +100,10 @@ struct NowPlayingView: View {
                     .padding(.top, 10)
             }
 
-            Spacer(minLength: tight ? 4 : 10)
+            Spacer(minLength: compact ? 4 : 9)
         }
+        .safeAreaPadding(.top, 4)
+        .safeAreaPadding(.bottom, 5)
     }
 
     /// Barre supérieure : fermeture explicite à gauche, poignée au centre.
@@ -262,12 +269,27 @@ struct NowPlayingView: View {
 
             HStack(spacing: 6) {
                 Chip(text: track.recitation.shortLabel, icon: "book.closed")
-                Chip(text: player.isPlayingLocal ? "Hors ligne" : "En ligne",
-                     icon: player.isPlayingLocal ? "arrow.down.circle.fill" : "wifi",
-                     tint: player.isPlayingLocal ? Theme.emerald : Theme.teal)
+                Chip(text: playbackStatusTitle,
+                     icon: playbackStatusIcon,
+                     tint: playbackStatusTint)
             }
             .padding(.top, 2)
         }
+    }
+
+    private var playbackStatusTitle: String {
+        if player.isBuffering { return "Chargement…" }
+        return player.isPlayingLocal ? "Disponible hors connexion" : "Lecture en streaming"
+    }
+
+    private var playbackStatusIcon: String {
+        if player.isBuffering { return "hourglass" }
+        return player.isPlayingLocal ? "arrow.down.circle.fill" : "wifi"
+    }
+
+    private var playbackStatusTint: Color {
+        if player.isBuffering { return Theme.gold }
+        return player.isPlayingLocal ? Theme.emerald : Theme.teal
     }
 
     private func scrubber(tight: Bool) -> some View {
@@ -305,7 +327,8 @@ struct NowPlayingView: View {
 
             CircleGlassButton(
                 icon: player.isPlaying ? "pause.fill" : "play.fill",
-                side: big, iconScale: 0.36, prominent: true
+                side: big, iconScale: 0.36, prominent: true,
+                disabled: player.isBuffering || player.errorMessage != nil
             ) {
                 player.togglePlayPause()
             }
@@ -376,14 +399,29 @@ struct NowPlayingView: View {
     }
 
     private func errorBanner(_ message: String) -> some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .center, spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 12))
+                .font(.system(size: 13))
                 .foregroundStyle(Theme.danger)
+
             Text(message)
                 .font(Theme.ui(11.5, .medium))
                 .foregroundStyle(Theme.ivory.opacity(0.9))
                 .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 4)
+
+            Button {
+                player.retry()
+            } label: {
+                Text("Réessayer")
+                    .font(Theme.ui(11, .bold))
+                    .foregroundStyle(Theme.ivory)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(Theme.danger.opacity(0.32)))
+            }
+            .buttonStyle(PressScale(scale: 0.96))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
@@ -402,6 +440,7 @@ struct NowPlayingView: View {
 /// mais assez doux pour garder le texte et la récitation au premier plan.
 private struct PlayerBackdrop: View {
     @State private var drift = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
@@ -451,6 +490,7 @@ private struct PlayerBackdrop: View {
             .frame(width: w, height: h)
             .clipped()
             .onAppear {
+                guard !reduceMotion else { return }
                 withAnimation(.easeInOut(duration: 19).repeatForever(autoreverses: true)) {
                     drift = true
                 }

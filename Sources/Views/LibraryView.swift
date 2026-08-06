@@ -41,6 +41,10 @@ struct LibraryView: View {
         downloads.inventory.values.reduce(0) { $0 + $1.count }
     }
 
+    private var totalAvailableSurahs: Int {
+        catalog.surahs.count
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 10) {
@@ -52,7 +56,7 @@ struct LibraryView: View {
                     EmptyStateView(
                         icon: "arrow.down.circle",
                         title: "Rien hors ligne",
-                        message: "Ouvre un récitateur, choisis une sourate et appuie sur la flèche. Tu pourras l'écouter sans réseau."
+                        message: "Choisis une sourate, touche « Télécharger », puis retrouve-la ici pour l'écouter sans réseau."
                     )
                 } else {
                     ForEach(groups) { group in
@@ -103,6 +107,18 @@ struct LibraryView: View {
             }
             .padding(.top, 8)
 
+            if totalFiles > 0 {
+                HStack(spacing: 8) {
+                    ProgressView(value: Double(totalFiles),
+                                 total: Double(max(totalAvailableSurahs, 1)))
+                        .tint(Theme.emerald)
+                    Text("\(totalFiles)/\(totalAvailableSurahs) sourates disponibles")
+                        .font(Theme.ui(10.5, .medium))
+                        .foregroundStyle(Theme.faint)
+                    Spacer(minLength: 0)
+                }
+            }
+
             OrnamentDivider()
         }
     }
@@ -111,7 +127,7 @@ struct LibraryView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 SectionHeader(title: "En cours",
-                              subtitle: "Se poursuit même app fermée")
+                              subtitle: "Continue même app fermée")
                 Spacer()
                 Button("Tout arrêter") { downloads.cancelAll() }
                     .font(Theme.ui(11.5, .semibold))
@@ -209,6 +225,7 @@ struct LibraryGroupCard: View {
                         .background(Circle().fill(Theme.accent))
                 }
                 .buttonStyle(PressScale())
+                .accessibilityLabel("Écouter \(reciter.name)")
 
                 Button {
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) { expanded.toggle() }

@@ -60,7 +60,7 @@ struct ReciterDetailView: View {
                 actionBar
                     .padding(.bottom, 2)
 
-                SearchField(text: $query, placeholder: "Sourate ou numéro…")
+                SearchField(text: $query, placeholder: "Rechercher une sourate…")
                     .padding(.bottom, 2)
 
                 if let version {
@@ -145,7 +145,8 @@ struct ReciterDetailView: View {
             }
 
             HStack(spacing: 6) {
-                Chip(text: "\(surahs.count) sourates", icon: "book.closed")
+                Chip(text: surahs.count == 114 ? "114 sourates" : "\(surahs.count) sourates",
+                     icon: "book.closed")
                 if let version {
                     Chip(text: version.providerLabel, icon: "antenna.radiowaves.left.and.right")
                 }
@@ -212,54 +213,65 @@ struct ReciterDetailView: View {
     // MARK: Actions groupées
 
     private var actionBar: some View {
-        HStack(spacing: 8) {
-            Button {
-                guard let first = queue.first else { return }
-                player.play(first, in: queue)
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "play.fill").font(.system(size: 12, weight: .bold))
-                    Text("Écouter").font(Theme.ui(13.5, .semibold))
-                }
-                .foregroundStyle(Theme.ivory)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 11)
-                .background(
-                    RoundedRectangle(cornerRadius: 15, style: .continuous).fill(Theme.accent)
-                )
-                .shadow(color: Theme.emerald.opacity(0.32), radius: 12, y: 5)
-            }
-            .buttonStyle(PressScale())
-            .disabled(queue.isEmpty)
-
-            Button {
-                guard let version else { return }
-                downloads.enqueueAll(reciter: reciter, recitation: version, surahs: surahs)
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.down.to.line").font(.system(size: 12, weight: .bold))
-                    Text("Tout").font(Theme.ui(13.5, .semibold))
-                }
-                .foregroundStyle(Theme.ivory)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 11)
-                .glass(radius: 15, elevation: 0.6)
-            }
-            .buttonStyle(PressScale())
-            .disabled(version == nil || offlineCount >= surahs.count)
-
-            if offlineCount > 0 {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
                 Button {
-                    confirmRemoveAll = true
+                    guard let first = queue.first else { return }
+                    player.play(first, in: queue)
                 } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Theme.danger)
-                        .frame(width: 44)
-                        .padding(.vertical, 11)
-                        .glass(radius: 15, elevation: 0.6)
+                    HStack(spacing: 6) {
+                        Image(systemName: "play.fill").font(.system(size: 12, weight: .bold))
+                        Text("Écouter le mushaf").font(Theme.ui(13.5, .semibold))
+                    }
+                    .foregroundStyle(Theme.ivory)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(
+                        RoundedRectangle(cornerRadius: 15, style: .continuous).fill(Theme.accent)
+                    )
+                    .shadow(color: Theme.emerald.opacity(0.32), radius: 12, y: 5)
                 }
                 .buttonStyle(PressScale())
+                .disabled(queue.isEmpty)
+
+                Button {
+                    guard let version else { return }
+                    downloads.enqueueAll(reciter: reciter, recitation: version, surahs: surahs)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.to.line").font(.system(size: 12, weight: .bold))
+                        Text("Télécharger tout").font(Theme.ui(13.5, .semibold))
+                    }
+                    .foregroundStyle(Theme.ivory)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .glass(radius: 15, elevation: 0.6)
+                }
+                .buttonStyle(PressScale())
+                .disabled(version == nil || offlineCount >= surahs.count)
+            }
+
+            if offlineCount > 0 {
+                HStack(spacing: 8) {
+                    ProgressView(value: Double(offlineCount), total: Double(max(surahs.count, 1)))
+                        .tint(Theme.emerald)
+                    Text("\(offlineCount)/\(surahs.count) disponible\(offlineCount > 1 ? "s" : "") hors connexion")
+                        .font(Theme.ui(10.5, .medium))
+                        .foregroundStyle(Theme.faint)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    Button {
+                        confirmRemoveAll = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.danger)
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 3)
             }
         }
     }

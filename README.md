@@ -2,6 +2,9 @@
 
 Application iOS de récitation du Coran. Catalogue de **328 récitateurs**, **463 versions de lecture**, **114 sourates**, écoute **hors ligne** et ajout de **n'importe quelle source au monde**.
 
+La version 1.1 améliore le lecteur plein écran, les états de chargement et d'erreur,
+la visibilité des téléchargements et la lisibilité des écrans principaux.
+
 Interface SwiftUI : verre translucide animé, géométrie islamique vectorielle, palette nuit / émeraude / or.
 
 ---

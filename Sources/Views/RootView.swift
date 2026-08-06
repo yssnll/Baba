@@ -126,7 +126,7 @@ struct MiniPlayerView: View {
                         .font(Theme.ui(13.5, .semibold))
                         .foregroundStyle(Theme.ivory)
                         .lineLimit(1)
-                    Text(track.reciterName)
+                    Text(player.isBuffering ? "Chargement de la récitation…" : track.reciterName)
                         .font(Theme.ui(11, .regular))
                         .foregroundStyle(Theme.faint)
                         .lineLimit(1)

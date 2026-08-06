@@ -61,10 +61,8 @@ struct RecitersView: View {
                     if results.isEmpty {
                         EmptyStateView(
                             icon: "magnifyingglass",
-                            title: "Aucun résultat",
-                            message: filter == .downloaded
-                                ? "Tu n'as encore rien téléchargé. Ouvre un récitateur et appuie sur la flèche."
-                                : "Essaie un autre nom, ou change de filtre."
+                            title: emptyTitle,
+                            message: emptyMessage
                         )
                     } else if showGroups {
                         ForEach(grouped) { group in
@@ -96,7 +94,7 @@ struct RecitersView: View {
                     Text("Tilawa")
                         .font(Theme.display(28, .bold))
                         .foregroundStyle(Theme.goldSheen)
-                    Text("\(catalog.allReciters.count) récitateurs · \(catalog.totalVersions) versions")
+                    Text(headerSummary)
                         .font(Theme.ui(11.5, .regular))
                         .foregroundStyle(Theme.faint)
                 }
@@ -124,6 +122,41 @@ struct RecitersView: View {
             .scrollIndicators(.hidden)
         }
         .padding(.bottom, 4)
+    }
+
+    private var headerSummary: String {
+        let count = results.count
+        if !query.trimmingCharacters(in: .whitespaces).isEmpty {
+            return "\(count) résultat\(count > 1 ? "s" : "")"
+        }
+        if filter != .all {
+            return "\(count) récitant\(count > 1 ? "s" : "") · \(filter.title)"
+        }
+        return "\(catalog.allReciters.count) récitant\(catalog.allReciters.count > 1 ? "s" : "") · \(catalog.totalVersions) versions"
+    }
+
+    private var emptyTitle: String {
+        switch filter {
+        case .favorites: return "Aucun favori"
+        case .downloaded: return "Aucun contenu hors connexion"
+        default: return "Aucun résultat"
+        }
+    }
+
+    private var emptyMessage: String {
+        if !query.trimmingCharacters(in: .whitespaces).isEmpty {
+            return "Essaie un autre nom ou efface la recherche pour voir tout le catalogue."
+        }
+        switch filter {
+        case .favorites:
+            return "Appuie sur l'étoile d'un récitateur pour le retrouver ici."
+        case .downloaded:
+            return "Ouvre un récitateur, choisis une sourate et télécharge-la pour l'écouter sans réseau."
+        case .complete:
+            return "Aucun récitateur ne propose actuellement les 114 sourates."
+        case .all:
+            return "Le catalogue ne contient aucun récitateur pour le moment."
+        }
     }
 
     private func letterHeader(_ letter: String, count: Int) -> some View {
@@ -213,7 +246,7 @@ struct ReciterRow: View {
                             Chip(text: "\(reciter.versions.count) versions", icon: "square.stack.3d.up")
                         }
                         if !reciter.completeVersions.isEmpty {
-                            Chip(text: "114", icon: "checkmark.seal.fill", tint: Theme.emerald)
+                            Chip(text: "114 sourates", icon: "checkmark.seal.fill", tint: Theme.emerald)
                         }
                         if offlineCount > 0 {
                             Chip(text: "\(offlineCount) hors ligne",
