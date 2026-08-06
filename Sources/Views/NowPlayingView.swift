@@ -25,8 +25,16 @@ struct NowPlayingView: View {
 
             if let track {
                 GeometryReader { geo in
-                    content(track, in: geo.size)
-                        .frame(width: geo.size.width, height: geo.size.height)
+                    let safe = geo.safeAreaInsets
+                    let contentWidth = max(0, geo.size.width - safe.leading - safe.trailing)
+                    let contentHeight = max(0, geo.size.height - safe.top - safe.bottom)
+
+                    content(track, in: CGSize(width: contentWidth, height: contentHeight))
+                        .frame(width: contentWidth, height: contentHeight, alignment: .top)
+                        .padding(.top, safe.top)
+                        .padding(.bottom, safe.bottom)
+                        .padding(.leading, safe.leading)
+                        .padding(.trailing, safe.trailing)
                 }
                 .ignoresSafeArea()
                 .offset(y: dragOffset)
@@ -57,18 +65,21 @@ struct NowPlayingView: View {
     @ViewBuilder
     private func content(_ track: Track, in size: CGSize) -> some View {
         let h = size.height
-        let tight = h < 700
-        let compact = h < 760
+        let tight = h < 620
+        let compact = h < 700
         // La scène centrale garde une taille généreuse, mais ne peut plus
         // consommer l'espace réservé aux contrôles sur un petit iPhone.
-        let art = min(size.width * 0.62, compact ? max(h * 0.20, 132) : h * 0.25)
-        let gap: CGFloat = compact ? 8 : 14
+        let art = min(
+            max(104, size.width * 0.60),
+            compact ? max(h * 0.18, 112) : h * 0.23
+        )
+        let gap: CGFloat = tight ? 5 : compact ? 9 : 14
 
         VStack(spacing: 0) {
             closeBar
                 .gesture(dismissDrag)
 
-            Spacer(minLength: compact ? 2 : 6)
+            Spacer(minLength: tight ? 0 : compact ? 2 : 6)
 
             artworkStage(for: track, side: art)
                 .gesture(dismissDrag)
@@ -80,16 +91,16 @@ struct NowPlayingView: View {
 
             Spacer(minLength: gap)
 
-            VStack(spacing: compact ? 11 : 15) {
+            VStack(spacing: tight ? 8 : compact ? 11 : 15) {
                 scrubber(tight: tight)
                 transport(tight: tight)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, compact ? 11 : 14)
+            .padding(.vertical, tight ? 8 : compact ? 11 : 14)
             .glass(radius: 26, elevation: 0.8)
             .padding(.horizontal, 14)
 
-            Spacer(minLength: compact ? 9 : 16)
+            Spacer(minLength: tight ? 5 : compact ? 9 : 16)
 
             secondaryBar(for: track)
                 .padding(.horizontal, 14)
@@ -100,10 +111,9 @@ struct NowPlayingView: View {
                     .padding(.top, 10)
             }
 
-            Spacer(minLength: compact ? 4 : 9)
+            Spacer(minLength: tight ? 2 : compact ? 4 : 9)
         }
-        .safeAreaPadding(.top, 4)
-        .safeAreaPadding(.bottom, 5)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     /// Barre supérieure : fermeture explicite à gauche, poignée au centre.
@@ -164,7 +174,7 @@ struct NowPlayingView: View {
             ornament(for: track, side: side)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: side * 1.42)
+        .frame(height: side * 1.36)
         .overlay {
             RoundedRectangle(cornerRadius: 32, style: .continuous)
                 .stroke(
