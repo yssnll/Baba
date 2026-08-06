@@ -77,7 +77,7 @@ struct NowPlayingView: View {
 
         VStack(spacing: 0) {
             closeBar
-                .gesture(dismissDrag)
+                .simultaneousGesture(dismissDrag)
 
             Spacer(minLength: tight ? 0 : compact ? 2 : 6)
 
@@ -146,10 +146,14 @@ struct NowPlayingView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 18)
-        .padding(.bottom, 5)
+        // Laisser une vraie marge sous l'heure système : sur les appareils
+        // avec encoche, la flèche ne doit jamais se retrouver sous la barre
+        // d'état. Cette marge abaisse aussi légèrement tout le lecteur.
+        .padding(.top, 32)
+        .padding(.bottom, 7)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
+        .zIndex(2)
     }
 
     /// Surface de présentation qui donne à la rosette une vraie place dans le
