@@ -97,6 +97,7 @@ struct NowPlayingView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, tight ? 8 : compact ? 11 : 14)
+            .background(Theme.night.opacity(0.56))
             .glass(radius: 26, elevation: 0.8)
             .padding(.horizontal, 14)
 
@@ -131,7 +132,8 @@ struct NowPlayingView: View {
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(Theme.ivory.opacity(0.9))
                         .frame(width: 36, height: 36)
-                        .glass(radius: 12, elevation: 0.5)
+                        .background(Theme.night.opacity(0.64))
+                        .glass(radius: 12, material: .regularMaterial, elevation: 0.5)
                 }
                 .buttonStyle(PressScale())
 
@@ -144,8 +146,8 @@ struct NowPlayingView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+        .padding(.top, 18)
+        .padding(.bottom, 5)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
     }
@@ -405,7 +407,8 @@ struct NowPlayingView: View {
         }
         .padding(.vertical, 11)
         .padding(.horizontal, 6)
-        .glass(radius: 20, elevation: 0.7)
+        .background(Theme.night.opacity(0.58))
+        .glass(radius: 20, material: .regularMaterial, elevation: 0.7)
     }
 
     private func errorBanner(_ message: String) -> some View {
