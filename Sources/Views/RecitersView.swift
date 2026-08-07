@@ -121,7 +121,9 @@ struct RecitersView: View {
                     .coordinateSpace(name: "recitersScroll")
                     .onPreferenceChange(RecitersScrollOffsetKey.self) { offset in
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            showScrollToTop = offset < -220
+                            // Afficher le bouton dès que la liste a réellement
+                            // commencé à descendre, pas après plusieurs écrans.
+                            showScrollToTop = offset < -24
                         }
                     }
 
@@ -132,9 +134,9 @@ struct RecitersView: View {
                             }
                         } label: {
                             Image(systemName: "arrow.up.circle.fill")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 18, weight: .bold))
                                 .foregroundStyle(Theme.gold)
-                                .frame(width: 42, height: 42)
+                                .frame(width: 48, height: 48)
                                 .background(Circle().fill(Theme.night.opacity(0.55)))
                                 .overlay(
                                     Circle()
@@ -144,11 +146,11 @@ struct RecitersView: View {
                         }
                         .buttonStyle(PressScale(scale: 0.92))
                         .padding(.trailing, 18)
-                        .padding(.bottom, 74)
+                        .padding(.bottom, 16)
                         .zIndex(10)
                         .transition(.scale.combined(with: .opacity))
-                         .accessibilityLabel("Remonter en haut")
-                         .accessibilityHint("Retourne au début de la liste des récitateurs")
+                        .accessibilityLabel("Remonter en haut")
+                        .accessibilityHint("Retourne au début de la liste des récitateurs")
                     }
                 }
                 .navigationBarHidden(true)
