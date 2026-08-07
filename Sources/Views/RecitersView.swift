@@ -309,7 +309,8 @@ struct ReciterRow: View {
                             .lineLimit(1)
                     }
 
-                    HStack(spacing: 5) {
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 5) {
                         if reciter.hasNameVariants {
                             Chip(text: "\(reciter.nameVariants.count) orthographes", icon: "textformat")
                         }
@@ -337,8 +338,11 @@ struct ReciterRow: View {
                             Chip(text: "\(offlineCount) hors ligne",
                                  icon: "arrow.down.circle.fill", tint: Theme.teal)
                         }
+                        }
                     }
+                    .scrollIndicators(.hidden)
                 }
+                .layoutPriority(1)
 
                 Spacer(minLength: 2)
 

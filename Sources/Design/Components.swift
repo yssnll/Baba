@@ -182,7 +182,10 @@ struct Chip: View {
             if let icon {
                 Image(systemName: icon).font(.system(size: 9, weight: .semibold))
             }
-            Text(text).font(Theme.ui(10.5, .semibold))
+            Text(text)
+                .font(Theme.ui(10.5, .semibold))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .foregroundStyle(tint)
         .padding(.horizontal, 8)
