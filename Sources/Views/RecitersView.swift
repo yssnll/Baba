@@ -109,24 +109,26 @@ struct RecitersView: View {
                     // même après un petit défilement, sans seuil ni détection
                     // de géométrie fragile.
                     Button {
-                        withAnimation(.easeInOut(duration: 0.45)) {
+                        // Une durée un peu plus longue rend le retour visible
+                        // et donne un vrai glissement jusqu'à l'ancre.
+                        withAnimation(.easeInOut(duration: 0.90)) {
                             scrollProxy.scrollTo("recitersTop", anchor: .top)
                         }
                     } label: {
                         Image(systemName: "arrow.up")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(Theme.night)
-                            .frame(width: 50, height: 50)
+                            .frame(width: 42, height: 42)
                             .background(
                                 Circle()
-                                    .fill(Theme.goldSheen.opacity(0.72))
+                                    .fill(Theme.goldSheen.opacity(0.52))
                                     .background(.ultraThinMaterial, in: Circle())
                             )
                             .overlay(
                                 Circle()
-                                    .stroke(Theme.ivory.opacity(0.42), lineWidth: 1)
+                                    .stroke(Theme.ivory.opacity(0.30), lineWidth: 0.8)
                             )
-                            .shadow(color: Theme.night.opacity(0.5), radius: 12, y: 5)
+                            .shadow(color: Theme.night.opacity(0.36), radius: 9, y: 4)
                     }
                     .buttonStyle(PressScale(scale: 0.90))
                     .padding(.trailing, 18)
