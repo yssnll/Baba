@@ -138,6 +138,7 @@ struct TilawaReciterQuery: EntityQuery, EntityStringQuery {
 struct PlayTilawaSurahIntent: AppIntent {
     static let title: LocalizedStringResource = "Lire une sourate"
     static let description = IntentDescription("Lance une sourate avec le récitateur choisi.")
+    static let openAppWhenRun = true
 
     @Parameter(title: "Sourate")
     var surah: TilawaSurahEntity
@@ -156,6 +157,7 @@ struct PlayTilawaSurahIntent: AppIntent {
 struct PlayTilawaReciterIntent: AppIntent {
     static let title: LocalizedStringResource = "Lire avec un récitateur"
     static let description = IntentDescription("Lance la Fatiha avec le récitateur choisi.")
+    static let openAppWhenRun = true
 
     @Parameter(title: "Récitateur")
     var reciter: TilawaReciterEntity
@@ -173,8 +175,11 @@ struct TilawaShortcuts: AppShortcutsProvider {
             phrases: [
                 "Lis \(\.$surah) avec \(\.$reciter) dans \(.applicationName)",
                 "Lis la sourate \(\.$surah) avec \(\.$reciter)",
+                "Lis la sourate \(\.$surah) avec \(\.$reciter) dans \(.applicationName)",
                 "Mets \(\.$surah) avec \(\.$reciter) dans \(.applicationName)",
                 "Mets la sourate \(\.$surah) avec \(\.$reciter)",
+                "Mets la sourate \(\.$surah) avec \(\.$reciter) dans \(.applicationName)",
+                "Lance la sourate \(\.$surah) avec \(\.$reciter) dans \(.applicationName)",
                 "Joue \(\.$surah) avec \(\.$reciter) dans \(.applicationName)"
             ],
             shortTitle: "Lire une sourate",
@@ -187,6 +192,7 @@ struct TilawaShortcuts: AppShortcutsProvider {
                 "Lis avec \(\.$reciter)",
                 "Mets \(\.$reciter) dans \(.applicationName)",
                 "Mets \(\.$reciter)",
+                "Lance la récitation avec \(\.$reciter) dans \(.applicationName)",
                 "Joue avec \(\.$reciter) dans \(.applicationName)"
             ],
             shortTitle: "Lire avec un récitateur",
