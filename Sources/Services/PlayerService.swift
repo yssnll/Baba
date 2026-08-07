@@ -35,6 +35,12 @@ enum RepeatMode: Int, CaseIterable {
 final class PlayerService: NSObject, ObservableObject {
     static let shared = PlayerService()
 
+    struct ResumeInfo: Identifiable {
+        let track: Track
+        let position: Double
+        var id: String { track.id }
+    }
+
     @Published private(set) var current: Track?
     @Published private(set) var queue: [Track] = []
     @Published private(set) var isPlaying = false
@@ -44,6 +50,7 @@ final class PlayerService: NSObject, ObservableObject {
     @Published var repeatMode: RepeatMode = .off
     @Published private(set) var errorMessage: String?
     @Published var isPresentingFullPlayer = false
+    @Published private(set) var pendingResume: ResumeInfo?
 
     /// Vrai pendant que l'utilisateur fait glisser la tête de lecture :
     /// on gèle alors les mises à jour de position pour éviter le tremblement.
@@ -53,6 +60,8 @@ final class PlayerService: NSObject, ObservableObject {
     private var timeObserver: Any?
     private var itemObservation: NSKeyValueObservation?
     private var artworkCache: [String: MPMediaItemArtwork] = [:]
+    private let resumeKey = "tilawa.playback.resume"
+    private var lastPersistedPosition = -1.0
 
     var hasQueue: Bool { !queue.isEmpty }
     var currentIndex: Int? { current.flatMap { c in queue.firstIndex(where: { $0.id == c.id }) } }
@@ -66,6 +75,7 @@ final class PlayerService: NSObject, ObservableObject {
         configureSession()
         configureRemoteCommands()
         observeInterruptions()
+        loadResume()
     }
 
     // MARK: - Session audio
@@ -118,6 +128,7 @@ final class PlayerService: NSObject, ObservableObject {
 
     func play(_ track: Track, in newQueue: [Track]) {
         queue = newQueue.isEmpty ? [track] : newQueue
+        pendingResume = nil
         start(track)
     }
 
@@ -129,7 +140,7 @@ final class PlayerService: NSObject, ObservableObject {
         }
     }
 
-    private func start(_ track: Track) {
+    private func start(_ track: Track, at initialPosition: Double = 0) {
         guard let url = DownloadManager.shared.playbackURL(for: track) else {
             errorMessage = "Adresse de lecture introuvable."
             return
@@ -138,14 +149,18 @@ final class PlayerService: NSObject, ObservableObject {
         teardownObservers()
         errorMessage = nil
         current = track
-        position = 0
+        position = max(0, initialPosition)
         duration = 0
         isBuffering = true
+        persistResume(track: track, position: position)
 
         let item = AVPlayerItem(url: url)
         let newPlayer = AVPlayer(playerItem: item)
         newPlayer.automaticallyWaitsToMinimizeStalling = true
         player = newPlayer
+        if initialPosition > 0 {
+            newPlayer.seek(to: CMTime(seconds: initialPosition, preferredTimescale: 600))
+        }
 
         itemObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             DispatchQueue.main.async {
@@ -191,6 +206,7 @@ final class PlayerService: NSObject, ObservableObject {
     func pause() {
         player?.pause()
         isPlaying = false
+        persistCurrentPosition()
         refreshNowPlaying()
     }
 
@@ -213,7 +229,25 @@ final class PlayerService: NSObject, ObservableObject {
         isPlaying = false
         position = 0
         duration = 0
+        clearResume()
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    }
+
+    func resumeSavedTrack() {
+        guard let pending = pendingResume else { return }
+        pendingResume = nil
+        start(pending.track, at: pending.position)
+        queue = [pending.track]
+    }
+
+    func dismissSavedResume() {
+        pendingResume = nil
+        clearResume()
+    }
+
+    func persistCurrentPosition() {
+        guard let current else { return }
+        persistResume(track: current, position: position)
     }
 
     func next() {
@@ -224,6 +258,7 @@ final class PlayerService: NSObject, ObservableObject {
         } else if repeatMode == .all, let first = queue.first {
             start(first)
         } else {
+            clearResume()
             pause()
         }
     }
@@ -281,6 +316,10 @@ final class PlayerService: NSObject, ObservableObject {
         ) { [weak self] time in
             guard let self else { return }
             if !self.isScrubbing { self.position = time.seconds }
+            if !self.isScrubbing,
+               self.position - self.lastPersistedPosition >= 5 {
+                self.persistCurrentPosition()
+            }
             if let d = self.player?.currentItem?.duration, d.isNumeric, d.seconds > 0 {
                 self.duration = d.seconds
             }
@@ -298,6 +337,32 @@ final class PlayerService: NSObject, ObservableObject {
         itemObservation = nil
         NotificationCenter.default.removeObserver(
             self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
+    }
+
+    private func loadResume() {
+        guard let data = UserDefaults.standard.data(forKey: resumeKey),
+              let saved = try? JSONDecoder().decode(ResumeSnapshot.self, from: data),
+              saved.position > 2 else { return }
+        pendingResume = ResumeInfo(track: saved.track, position: saved.position)
+    }
+
+    private func persistResume(track: Track, position: Double) {
+        guard position >= 0,
+              let data = try? JSONEncoder().encode(ResumeSnapshot(track: track, position: position))
+        else { return }
+        UserDefaults.standard.set(data, forKey: resumeKey)
+        lastPersistedPosition = position
+    }
+
+    private func clearResume() {
+        pendingResume = nil
+        lastPersistedPosition = -1
+        UserDefaults.standard.removeObject(forKey: resumeKey)
+    }
+
+    private struct ResumeSnapshot: Codable {
+        let track: Track
+        let position: Double
     }
 
     // MARK: - Écran verrouillé

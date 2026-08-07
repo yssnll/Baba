@@ -33,6 +33,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
+    func applicationWillResignActive(_ application: UIApplication) {
+        PlayerService.shared.persistCurrentPosition()
+    }
+
     /// iOS relance le processus pour signaler la fin de transferts d'arrière-plan.
     /// Le gestionnaire conserve le handler et l'appelle une fois l'inventaire à jour.
     func application(

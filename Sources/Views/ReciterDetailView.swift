@@ -11,6 +11,7 @@ struct ReciterDetailView: View {
     @State private var versionIndex = 0
     @State private var query = ""
     @State private var confirmRemoveAll = false
+    @State private var confirmDownloadAll = false
 
     private var version: Recitation? {
         guard reciter.versions.indices.contains(versionIndex) else { return reciter.versions.first }
@@ -39,6 +40,18 @@ struct ReciterDetailView: View {
     private var offlineCount: Int {
         guard let version else { return 0 }
         return downloads.downloadedCount(recitationId: version.id)
+    }
+
+    private var failedDownloadMessages: [String] {
+        guard let version else { return [] }
+        return surahs.compactMap { surah in
+            let track = track(for: surah, version: version)
+            return downloads.state(for: track).errorMessage
+        }
+    }
+
+    private var estimatedDownloadSize: String {
+        Fmt.bytes(DownloadManager.estimatedBytes(for: surahs.count))
     }
 
     /// File complète : permet au lecteur d'enchaîner tout le mushaf.
@@ -92,6 +105,19 @@ struct ReciterDetailView: View {
                 if let version { downloads.removeAll(recitationId: version.id) }
             }
             Button("Annuler", role: .cancel) {}
+        }
+        .confirmationDialog(
+            "Télécharger \(surahs.count) sourates (\(estimatedDownloadSize)) ?",
+            isPresented: $confirmDownloadAll,
+            titleVisibility: .visible
+        ) {
+            Button("Télécharger") {
+                guard let version else { return }
+                downloads.enqueueAll(reciter: reciter, recitation: version, surahs: surahs)
+            }
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("Le téléchargement peut utiliser beaucoup de stockage. Le Wi‑Fi uniquement est activé par défaut.")
         }
     }
 
@@ -235,8 +261,7 @@ struct ReciterDetailView: View {
                 .disabled(queue.isEmpty)
 
                 Button {
-                    guard let version else { return }
-                    downloads.enqueueAll(reciter: reciter, recitation: version, surahs: surahs)
+                    confirmDownloadAll = true
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.down.to.line").font(.system(size: 12, weight: .bold))
@@ -249,6 +274,34 @@ struct ReciterDetailView: View {
                 }
                 .buttonStyle(PressScale())
                 .disabled(version == nil || offlineCount >= surahs.count)
+            }
+
+            if let message = failedDownloadMessages.first {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Theme.danger)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Un téléchargement a échoué : \(message)")
+                            .font(Theme.ui(10.5, .medium))
+                            .foregroundStyle(Theme.danger)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Réessayer les échecs") {
+                            guard let version else { return }
+                            for surah in surahs {
+                                let track = track(for: surah, version: version)
+                                if downloads.state(for: track).errorMessage != nil {
+                                    downloads.enqueue(track)
+                                }
+                            }
+                        }
+                        .font(Theme.ui(10.5, .bold))
+                        .foregroundStyle(Theme.ivory)
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.danger.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
 
             if offlineCount > 0 {

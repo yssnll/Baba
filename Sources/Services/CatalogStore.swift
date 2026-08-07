@@ -18,6 +18,7 @@ final class CatalogStore: ObservableObject {
     @Published private(set) var isRefreshing = false
     @Published private(set) var lastRefresh: Date?
     @Published var refreshMessage: String?
+    @Published private(set) var refreshSucceeded: Bool?
 
     private let favoritesKey = "tilawa.favorites"
     private let lastRefreshKey = "tilawa.lastRefresh"
@@ -151,6 +152,7 @@ final class CatalogStore: ObservableObject {
             guard !self.isRefreshing else { return false }
             self.isRefreshing = true
             self.refreshMessage = nil
+            self.refreshSucceeded = nil
             return true
         }
         guard acquired else { return }
@@ -159,9 +161,10 @@ final class CatalogStore: ObservableObject {
         async let qa = Self.fetchQuranicAudio()
         let (a, b) = await (mp3, qa)
 
-        func finish(_ message: String?) async {
+        func finish(_ message: String?, failed: Bool = true) async {
             await MainActor.run {
                 if let message { self.refreshMessage = message }
+                self.refreshSucceeded = !failed
                 self.isRefreshing = false
             }
         }
@@ -192,6 +195,7 @@ final class CatalogStore: ObservableObject {
             self.catalog = merged
             self.lastRefresh = stamp
             self.refreshMessage = "\(merged.count) récitateurs · \(versions) versions"
+            self.refreshSucceeded = true
             self.isRefreshing = false
         }
     }

@@ -8,7 +8,7 @@ struct RootView: View {
     var body: some View {
         let appearanceKey = "\(appearance.preset.rawValue)-\(appearance.backgroundHex)-\(appearance.accentHex)-\(appearance.goldHex)"
 
-        ZStack {
+        ZStack(alignment: .top) {
             LiquidBackdrop()
 
             Group {
@@ -20,6 +20,17 @@ struct RootView: View {
             }
             .transition(.opacity.combined(with: .scale(scale: 0.985)))
             .animation(.easeInOut(duration: 0.22), value: tab)
+
+            if let resume = player.pendingResume {
+                VStack(spacing: 0) {
+                    resumeBanner(for: resume)
+                        .padding(.horizontal, 14)
+                        .padding(.top, 10)
+                    Spacer()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(3)
+            }
         }
         .id(appearanceKey)
         // En inset de safe area : les listes gagnent automatiquement la marge
@@ -42,6 +53,50 @@ struct RootView: View {
         .fullScreenCover(isPresented: $player.isPresentingFullPlayer) {
             NowPlayingView()
         }
+    }
+
+    private func resumeBanner(for resume: PlayerService.ResumeInfo) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "play.circle.fill")
+                .font(.system(size: 22))
+                .foregroundStyle(Theme.gold)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Reprendre la lecture ?")
+                    .font(Theme.ui(12.5, .semibold))
+                    .foregroundStyle(Theme.ivory)
+                Text("\(resume.track.surah.nameFr) · \(Fmt.time(resume.position))")
+                    .font(Theme.ui(10.5, .regular))
+                    .foregroundStyle(Theme.faint)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            Button("Reprendre") {
+                player.resumeSavedTrack()
+            }
+            .font(Theme.ui(11, .bold))
+            .foregroundStyle(Theme.night)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(Capsule().fill(Theme.goldSheen))
+            .buttonStyle(PressScale(scale: 0.96))
+
+            Button {
+                player.dismissSavedResume()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Theme.muted)
+                    .frame(width: 26, height: 26)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Theme.night.opacity(0.88))
+        .glass(radius: 17, elevation: 0.8)
     }
 }
 

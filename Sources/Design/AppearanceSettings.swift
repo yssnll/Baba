@@ -1,10 +1,10 @@
 import SwiftUI
 import UIKit
 
-/// Apparence personnalisable de Tilawa.
+/// Apparence de Tilawa.
 ///
-/// Les choix sont conservés localement afin de rester actifs après le
-/// redémarrage de l'application.
+/// Les trois palettes proposées sont conservées localement afin de rester
+/// actives après le redémarrage de l'application.
 final class AppearanceSettings: ObservableObject {
     static let shared = AppearanceSettings()
 
@@ -12,9 +12,6 @@ final class AppearanceSettings: ObservableObject {
         case nocturne
         case emerald
         case sapphire
-        case ruby
-        case ivory
-        case custom
 
         var id: String { rawValue }
 
@@ -23,9 +20,6 @@ final class AppearanceSettings: ObservableObject {
             case .nocturne: return "Nocturne dorée"
             case .emerald: return "Jardin émeraude"
             case .sapphire: return "Bleu saphir"
-            case .ruby: return "Rubis profond"
-            case .ivory: return "Ivoire lumineux"
-            case .custom: return "Personnalisée"
             }
         }
 
@@ -34,9 +28,6 @@ final class AppearanceSettings: ObservableObject {
             case .nocturne: return "moon.stars.fill"
             case .emerald: return "leaf.fill"
             case .sapphire: return "drop.fill"
-            case .ruby: return "flame.fill"
-            case .ivory: return "sun.max.fill"
-            case .custom: return "slider.horizontal.3"
             }
         }
     }
@@ -55,7 +46,8 @@ final class AppearanceSettings: ObservableObject {
     private var applyingPreset = false
 
     private init() {
-        preset = Preset(rawValue: defaults.string(forKey: Keys.preset) ?? "") ?? .nocturne
+        let storedPreset = Preset(rawValue: defaults.string(forKey: Keys.preset) ?? "")
+        preset = storedPreset ?? .nocturne
         backgroundHex = defaults.string(forKey: Keys.background) ?? "#100D19"
         surfaceHex = defaults.string(forKey: Keys.surface) ?? "#211A2D"
         accentHex = defaults.string(forKey: Keys.accent) ?? "#B98A42"
@@ -65,7 +57,7 @@ final class AppearanceSettings: ObservableObject {
         successHex = defaults.string(forKey: Keys.success) ?? "#6BC4A3"
         dangerHex = defaults.string(forKey: Keys.danger) ?? "#F07878"
 
-        if defaults.string(forKey: Keys.preset) == nil {
+        if storedPreset == nil {
             applyPreset(.nocturne, save: false)
         }
     }
@@ -79,17 +71,11 @@ final class AppearanceSettings: ObservableObject {
     var success: Color { Color(hex: successHex) }
     var danger: Color { Color(hex: dangerHex) }
 
-    var isLight: Bool { preset == .ivory }
+    var isLight: Bool { false }
 
     func applyPreset(_ preset: Preset) {
-        guard preset != .custom else { return }
         applyPreset(preset, save: true)
     }
-
-    func setBackground(_ color: Color) { update(\.backgroundHex, color: color) }
-    func setSurface(_ color: Color) { update(\.surfaceHex, color: color) }
-    func setAccent(_ color: Color) { update(\.accentHex, color: color) }
-    func setGold(_ color: Color) { update(\.goldHex, color: color) }
 
     private func applyPreset(_ preset: Preset, save: Bool) {
         applyingPreset = true
@@ -123,40 +109,10 @@ final class AppearanceSettings: ObservableObject {
             mutedHex = "#A9BBD0"
             successHex = "#6CCDBE"
             dangerHex = "#F28B9A"
-        case .ruby:
-            backgroundHex = "#1B0C13"
-            surfaceHex = "#351722"
-            accentHex = "#B84D63"
-            goldHex = "#E5A16C"
-            textHex = "#FFF1EC"
-            mutedHex = "#C9AAB1"
-            successHex = "#83C9A4"
-            dangerHex = "#FF8A7A"
-        case .ivory:
-            backgroundHex = "#F6F0E6"
-            surfaceHex = "#FFFDF8"
-            accentHex = "#8B6330"
-            goldHex = "#B47C2C"
-            textHex = "#241B18"
-            mutedHex = "#756963"
-            successHex = "#327C61"
-            dangerHex = "#B74B48"
-        case .custom:
-            break
         }
 
         applyingPreset = false
         if save { persist() }
-    }
-
-    private func update(
-        _ keyPath: ReferenceWritableKeyPath<AppearanceSettings, String>,
-        color: Color
-    ) {
-        guard let hex = color.hexString else { return }
-        self[keyPath: keyPath] = hex
-        if !applyingPreset { preset = .custom }
-        persist()
     }
 
     private func persist() {

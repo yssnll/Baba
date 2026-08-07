@@ -21,8 +21,19 @@ final class DownloadManager: NSObject, ObservableObject {
     /// Renseigné par le délégué d'app quand iOS réveille le processus.
     var backgroundCompletion: (() -> Void)?
 
-    @Published var wifiOnly: Bool = UserDefaults.standard.bool(forKey: "tilawa.wifiOnly") {
+    @Published var wifiOnly: Bool = {
+        let defaults = UserDefaults.standard
+        return defaults.object(forKey: "tilawa.wifiOnly") == nil
+            ? true
+            : defaults.bool(forKey: "tilawa.wifiOnly")
+    }() {
         didSet { UserDefaults.standard.set(wifiOnly, forKey: "tilawa.wifiOnly") }
+    }
+
+    /// Estimation volontairement prudente pour prévenir l'utilisateur avant
+    /// le téléchargement d'un mushaf complet.
+    static func estimatedBytes(for surahCount: Int) -> Int64 {
+        Int64(max(0, surahCount)) * 3_000_000
     }
 
     private lazy var session: URLSession = {

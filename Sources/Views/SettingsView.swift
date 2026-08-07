@@ -6,7 +6,6 @@ struct SettingsView: View {
     @ObservedObject private var appearance = AppearanceSettings.shared
 
     @State private var showAddReciter = false
-    @State private var showQuickAdd = false
     @State private var confirmWipe = false
 
     private var lastRefreshText: String {
@@ -23,7 +22,6 @@ struct SettingsView: View {
                 header
                 appearanceCard
                 catalogCard
-                customSourcesCard
                 networkCard
                 storageCard
                 aboutCard
@@ -34,9 +32,6 @@ struct SettingsView: View {
         .scrollIndicators(.hidden)
         .sheet(isPresented: $showAddReciter) {
             AddReciterView()
-        }
-        .sheet(isPresented: $showQuickAdd) {
-            QuickAddView()
         }
         .confirmationDialog("Supprimer tout l'audio téléchargé ?",
                             isPresented: $confirmWipe, titleVisibility: .visible) {
@@ -52,7 +47,7 @@ struct SettingsView: View {
     private var appearanceCard: some View {
         card {
             SectionHeader(title: "Apparence",
-                          subtitle: "Personnalise les couleurs de Tilawa")
+                          subtitle: "Choisis une palette")
 
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
@@ -86,40 +81,17 @@ struct SettingsView: View {
                             }
                         }
                         .buttonStyle(PressScale(scale: 0.97))
-                        .disabled(preset == .custom)
-                        .opacity(preset == .custom && appearance.preset != .custom ? 0.72 : 1)
                     }
                 }
                 .padding(.vertical, 1)
             }
             .scrollIndicators(.hidden)
 
-            OrnamentDivider()
-
-            Text("Couleurs principales")
-                .font(Theme.ui(11.5, .semibold))
-                .foregroundStyle(appearance.muted)
-
-            appearanceColorRow("Fond", color: appearance.background) {
-                appearance.setBackground($0)
-            }
-            appearanceColorRow("Surfaces", color: appearance.surface) {
-                appearance.setSurface($0)
-            }
-            appearanceColorRow("Accent", color: appearance.accent) {
-                appearance.setAccent($0)
-            }
-            appearanceColorRow("Doré", color: appearance.gold) {
-                appearance.setGold($0)
-            }
-
             HStack(spacing: 8) {
                 Circle()
                     .fill(appearance.accent)
                     .frame(width: 9, height: 9)
-                Text(appearance.preset == .custom
-                     ? "Palette personnalisée"
-                     : appearance.preset.title)
+                Text(appearance.preset.title)
                     .font(Theme.ui(10.5, .medium))
                     .foregroundStyle(appearance.muted)
                 Spacer()
@@ -135,27 +107,6 @@ struct SettingsView: View {
         case .nocturne: return Color(red: 0.18, green: 0.13, blue: 0.24)
         case .emerald: return Color(red: 0.10, green: 0.31, blue: 0.25)
         case .sapphire: return Color(red: 0.11, green: 0.28, blue: 0.48)
-        case .ruby: return Color(red: 0.43, green: 0.13, blue: 0.20)
-        case .ivory: return Color(red: 0.96, green: 0.91, blue: 0.82)
-        case .custom: return appearance.surface
-        }
-    }
-
-    private func appearanceColorRow(
-        _ title: String,
-        color: Color,
-        onChange: @escaping (Color) -> Void
-    ) -> some View {
-        HStack(spacing: 10) {
-            Text(title)
-                .font(Theme.ui(12.5, .medium))
-                .foregroundStyle(appearance.text)
-            Spacer()
-            ColorPicker("", selection: Binding(
-                get: { color },
-                set: { onChange($0) }
-            ), supportsOpacity: false)
-            .labelsHidden()
         }
     }
 
@@ -181,10 +132,19 @@ struct SettingsView: View {
                 .font(Theme.ui(11.5, .regular))
                 .foregroundStyle(Theme.faint)
 
+            if let succeeded = catalog.refreshSucceeded {
+                Label(
+                    succeeded ? "Dernière synchronisation réussie" : "Dernière synchronisation échouée",
+                    systemImage: succeeded ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+                )
+                .font(Theme.ui(10.5, .medium))
+                .foregroundStyle(succeeded ? Theme.emerald : Theme.danger)
+            }
+
             if let message = catalog.refreshMessage {
                 Text(message)
                     .font(Theme.ui(11.5, .medium))
-                    .foregroundStyle(Theme.emerald)
+                    .foregroundStyle(catalog.refreshSucceeded == false ? Theme.danger : Theme.emerald)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -215,89 +175,15 @@ struct SettingsView: View {
                 .font(Theme.ui(10.5, .regular))
                 .foregroundStyle(Theme.faint)
                 .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var customSourcesCard: some View {
-        card {
-            SectionHeader(title: "Sources",
-                           subtitle: "\(catalog.custom.count) source\(catalog.custom.count > 1 ? "s" : "") personnalisée\(catalog.custom.count > 1 ? "s" : "")")
-
-            // Voie principale : aucune adresse à saisir.
-            Button {
-                showQuickAdd = true
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "hand.tap.fill")
-                        .font(.system(size: 15, weight: .bold))
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Ajouter en un appui")
-                            .font(Theme.ui(13.5, .semibold))
-                        Text("Source détectée, tout téléchargé, prêt hors ligne")
-                            .font(Theme.ui(10, .regular))
-                            .opacity(0.75)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .bold))
-                        .opacity(0.6)
-                }
-                .foregroundStyle(Theme.night)
-                .padding(.horizontal, 13)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 15, style: .continuous).fill(Theme.goldSheen)
-                )
-            }
-            .buttonStyle(PressScale())
-
-            OrnamentDivider()
-
-            Text("Récitateur absent du catalogue ?")
-                .font(Theme.ui(11.5, .semibold))
-                .foregroundStyle(Theme.muted)
-
-            if catalog.custom.isEmpty {
-                Text("Aucune source personnalisée.")
-                    .font(Theme.ui(11.5, .regular))
-                    .foregroundStyle(Theme.faint)
-            } else {
-                ForEach(catalog.custom) { reciter in
-                    HStack(spacing: 10) {
-                        Monogram(reciter: reciter, side: 32)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(reciter.name)
-                                .font(Theme.ui(13, .semibold))
-                                .foregroundStyle(Theme.ivory)
-                                .lineLimit(1)
-                            Text(reciter.versions.first?.urlTemplate ?? "")
-                                .font(Theme.mono(9, .regular))
-                                .foregroundStyle(Theme.faint)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                        Spacer()
-                        Button {
-                            catalog.removeCustomReciter(id: reciter.id)
-                        } label: {
-                            Image(systemName: "trash")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Theme.danger)
-                                .frame(width: 28, height: 28)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.vertical, 3)
-                }
-            }
 
             Button {
                 showAddReciter = true
             } label: {
                 HStack(spacing: 7) {
-                    Image(systemName: "link").font(.system(size: 12, weight: .bold))
-                    Text("Ajouter par adresse").font(Theme.ui(13, .semibold))
+                    Image(systemName: "link")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("Ajouter une source")
+                        .font(Theme.ui(13, .semibold))
                 }
                 .foregroundStyle(Theme.ivory)
                 .frame(maxWidth: .infinity)

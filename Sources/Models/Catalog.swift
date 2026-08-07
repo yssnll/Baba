@@ -115,7 +115,7 @@ struct SurahCatalogFile: Codable {
 // MARK: - Piste jouable
 
 /// Unité de lecture : une sourate dans une version précise.
-struct Track: Identifiable, Hashable {
+struct Track: Identifiable, Hashable, Codable {
     let reciterId: String
     let reciterName: String
     let reciterNameAr: String
@@ -155,5 +155,10 @@ enum DownloadState: Equatable {
         if case .downloading(let p) = self { return p }
         if case .done = self { return 1 }
         return 0
+    }
+
+    var errorMessage: String? {
+        if case .failed(let message) = self { return message }
+        return nil
     }
 }
