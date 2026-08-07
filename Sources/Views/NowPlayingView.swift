@@ -58,7 +58,10 @@ struct NowPlayingView: View {
             }
         }
         .statusBarHidden(false)
-        .presentationBackground(.clear)
+        // La couverture doit être totalement opaque : sinon le contenu de la
+        // page précédente (sourates et mini-lecteur) reste visible derrière.
+        .background(Theme.night.ignoresSafeArea())
+        .presentationBackground(Theme.night)
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 4.5).repeatForever(autoreverses: true)) {
