@@ -22,6 +22,18 @@ struct TilawaApp: App {
                 .onOpenURL { url in
                     Task { await TilawaPlaybackRouter.handle(url: url) }
                 }
+                .onReceive(
+                    NotificationCenter.default.publisher(
+                        for: UIApplication.willEnterForegroundNotification
+                    )
+                ) { _ in
+                    // Si le widget a déclenché une URL pendant que l'app était
+                    // suspendue, on republie l'état après son retour au premier
+                    // plan afin que le widget reflète l'action effectuée.
+                    Task { @MainActor in
+                        PlayerService.shared.refreshWidgetSnapshot()
+                    }
+                }
         }
     }
 }

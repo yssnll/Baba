@@ -77,6 +77,10 @@ final class PlayerService: NSObject, ObservableObject {
         configureRemoteCommands()
         observeInterruptions()
         loadResume()
+        // Le widget peut être affiché avant toute nouvelle action de lecture.
+        // Publier immédiatement l'état restauré évite une timeline vide après
+        // un redémarrage de l'app ou une installation de l'extension.
+        updateWidgetSnapshot()
     }
 
     // MARK: - Session audio
@@ -424,11 +428,19 @@ final class PlayerService: NSObject, ObservableObject {
         updateWidgetSnapshot()
     }
 
+    /// Republie l'état actuel après le retour de l'application au premier plan.
     /// Les widgets lisent uniquement un petit état sérialisé dans l'App Group.
     /// Le catalogue et les fichiers audio restent privés à l'application.
+    func refreshWidgetSnapshot() {
+        updateWidgetSnapshot()
+    }
+
     private func updateWidgetSnapshot() {
         guard let defaults = UserDefaults(suiteName: TilawaSharedState.appGroup) else { return }
-        if let track = current {
+        // Après un redémarrage, la dernière piste est d'abord dans
+        // `pendingResume` avant que l'utilisateur ne relance la lecture.
+        // Elle doit tout de même rester visible dans le widget.
+        if let track = current ?? pendingResume?.track {
             defaults.set("\(track.surah.number). \(track.surah.nameTranslit)", forKey: TilawaSharedState.widgetTitle)
             defaults.set(track.reciterName, forKey: TilawaSharedState.widgetSubtitle)
             defaults.set(track.reciterId, forKey: TilawaSharedState.widgetReciterID)
@@ -440,7 +452,8 @@ final class PlayerService: NSObject, ObservableObject {
             defaults.removeObject(forKey: TilawaSharedState.widgetSurahNumber)
         }
         defaults.set(isPlaying, forKey: TilawaSharedState.widgetIsPlaying)
-        defaults.set(position, forKey: TilawaSharedState.widgetPosition)
+        defaults.set(current == nil ? (pendingResume?.position ?? position) : position,
+                     forKey: TilawaSharedState.widgetPosition)
         defaults.set(duration, forKey: TilawaSharedState.widgetDuration)
         WidgetCenter.shared.reloadAllTimelines()
     }

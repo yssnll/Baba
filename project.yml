@@ -56,11 +56,10 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: "YES"
-        # --- Signature désactivée : la CI produit une IPA non signée ---
-        CODE_SIGN_IDENTITY: ""
-        CODE_SIGNING_REQUIRED: "NO"
-        CODE_SIGNING_ALLOWED: "NO"
-        DEVELOPMENT_TEAM: ""
+        # La signature est volontairement laissée à Xcode. L'app et
+        # l'extension doivent être signées ensemble pour que l'App Group
+        # permette au widget de lire l'état du lecteur.
+        CODE_SIGN_STYLE: Automatic
     # Le plist est généré hors de « Sources/ » : placé dedans, il serait aussi
     # ramassé par la phase de copie des ressources (Info.plist en double).
     info:
@@ -103,10 +102,8 @@ targets:
         INFOPLIST_FILE: Sources/Widget/Info.plist
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
-        CODE_SIGN_IDENTITY: ""
-        CODE_SIGNING_REQUIRED: "NO"
-        CODE_SIGNING_ALLOWED: "NO"
-        DEVELOPMENT_TEAM: ""
+        # Doit utiliser la même équipe et le même App Group que l'app.
+        CODE_SIGN_STYLE: Automatic
 
 # Schéma déclaré explicitement : XcodeGen n'en crée pas d'office, et
 # « xcodebuild -scheme Tilawa » échouerait sans lui.

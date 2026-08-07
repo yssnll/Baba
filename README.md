@@ -35,7 +35,7 @@ Trois choses honnêtes, pour t'éviter une mauvaise surprise.
 
 La première compilation peut donc encore révéler des erreurs (un type, un argument). Elles sont normalement rapides à corriger : envoie-moi le log d'erreur de la CI et je les traite.
 
-**2. L'IPA produite est non signée.** Aucun outil ne peut signer à ta place : la signature dépend de ton compte Apple et de ton appareil. La section *Installer* explique comment le faire gratuitement.
+**2. Le widget nécessite une IPA signée.** Une IPA non signée peut servir à vérifier que le bundle est construit, mais elle ne peut pas activer l'App Group `group.app.tilawa`. Pour utiliser le widget, ouvre le projet sur un Mac avec Xcode, choisis la même équipe Apple pour `Tilawa` et `TilawaWidget`, puis active l'App Group `group.app.tilawa` pour les deux cibles. Le script accepte aussi `DEVELOPMENT_TEAM=TON_EQUIPE ./build-ipa.sh` et exporte alors une IPA signée si les profils sont disponibles. Un compte Apple Developer payant est nécessaire pour les App Groups.
 
 **3. Les récitations ne sont pas embarquées dans l'app.** C'est un choix, pas un oubli — voir *Le modèle hors ligne*.
 
@@ -49,12 +49,17 @@ La première compilation peut donc encore révéler des erreurs (un type, un arg
 2. Onglet **Actions** → *Build IPA* → **Run workflow**.
 3. À la fin (~5 min), récupère l'artefact `Tilawa-unsigned-ipa`.
 
+> Cet artefact est uniquement une compilation de contrôle : il faut le
+> re-signer avec une équipe Apple avant installation, sinon le widget et
+> l'App Group ne fonctionneront pas.
+
 Les runners macOS sont gratuits pour les dépôts publics.
 
 ### Option B — Sur un Mac
 
 ```bash
-./build-ipa.sh          # installe XcodeGen si besoin, compile, produit l'IPA
+./build-ipa.sh          # compile et produit une IPA non signée de contrôle
+DEVELOPMENT_TEAM=ABC1234567 ./build-ipa.sh  # compile, signe et exporte Tilawa.ipa
 ```
 
 Pour travailler dans Xcode :
@@ -132,6 +137,24 @@ Tes sources apparaissent en tête de liste, avec les 114 sourates et le téléch
 - **Lecteur** — arrière-plan et écran verrouillé, contrôles depuis le centre de contrôle et les AirPods, vignette dessinée à la volée, ±15 s, répétition sourate/série, reprise après interruption, pause au débranchement du casque.
 - **Hors ligne** — regroupé par récitateur et version, poids par groupe, suppression fine ou globale, suivi des transferts en cours.
 - **Réglages** — synchronisation, Wi-Fi uniquement, sources personnalisées, gestion du stockage.
+
+### Widget et contrôles audio
+
+Le widget est un widget d'écran d'accueil WidgetKit. Ses boutons ouvrent
+Tilawa avec une URL `tilawa://...`, puis l'application exécute l'action
+(reprendre, pause, précédent ou suivant). Il ne peut pas maintenir un lecteur
+audio dans le processus du widget : iOS limite les extensions WidgetKit et
+leur interdit de remplacer les contrôles natifs de l'écran verrouillé.
+
+Pour un comportement de type Apple Music, utilise donc :
+
+- le widget signé pour l'accès rapide et l'état de la lecture ;
+- les contrôles de l'écran verrouillé, du Centre de contrôle et des AirPods
+  fournis par `MPNowPlayingInfoCenter` et `MPRemoteCommandCenter`.
+
+Si le widget n'apparaît pas du tout, le premier contrôle à faire est la
+signature : l'app et `TilawaWidget` doivent avoir la même équipe Apple et
+l'App Group `group.app.tilawa` doit être activé sur les deux cibles.
 
 ---
 
