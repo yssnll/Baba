@@ -141,27 +141,25 @@ struct PlayTilawaReciterIntent: AppIntent {
 
 struct TilawaShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
-        [
-            AppShortcut(
-                intent: PlayTilawaSurahIntent(),
-                phrases: [
-                    "Lis \(\.$surah) avec \(\.$reciter) dans \(.applicationName)",
-                    "Mets \(\.$surah) avec \(\.$reciter) dans \(.applicationName)",
-                    "Joue \(\.$surah) avec \(\.$reciter) dans \(.applicationName)"
-                ],
-                shortTitle: "Lire une sourate",
-                systemImageName: "play.fill"
-            ),
-            AppShortcut(
-                intent: PlayTilawaReciterIntent(),
-                phrases: [
-                    "Lis avec \(\.$reciter) dans \(.applicationName)",
-                    "Mets \(\.$reciter) dans \(.applicationName)",
-                    "Joue avec \(\.$reciter) dans \(.applicationName)"
-                ],
-                shortTitle: "Lire avec un récitateur",
-                systemImageName: "person.wave.2.fill"
-            )
-        ]
+        AppShortcut(
+            intent: PlayTilawaSurahIntent(),
+            phrases: [
+                "Lis \(\.$surah) avec \(\.$reciter) dans \(.applicationName)",
+                "Mets \(\.$surah) avec \(\.$reciter) dans \(.applicationName)",
+                "Joue \(\.$surah) avec \(\.$reciter) dans \(.applicationName)"
+            ],
+            shortTitle: "Lire une sourate",
+            systemImageName: "play.fill"
+        )
+        AppShortcut(
+            intent: PlayTilawaReciterIntent(),
+            phrases: [
+                "Lis avec \(\.$reciter) dans \(.applicationName)",
+                "Mets \(\.$reciter) dans \(.applicationName)",
+                "Joue avec \(\.$reciter) dans \(.applicationName)"
+            ],
+            shortTitle: "Lire avec un récitateur",
+            systemImageName: "person.wave.2.fill"
+        )
     }
 }
