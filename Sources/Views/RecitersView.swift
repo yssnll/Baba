@@ -6,7 +6,6 @@ struct RecitersView: View {
 
     @State private var query = ""
     @State private var filter: ReciterFilter = .all
-    @State private var showScrollToTop = false
     @AppStorage("tilawa.selectedRiwaya") private var selectedRiwayaRaw = Riwaya.all.rawValue
 
     private var selectedRiwaya: Riwaya {
@@ -68,90 +67,69 @@ struct RecitersView: View {
             ScrollViewReader { scrollProxy in
                 ZStack(alignment: .bottomTrailing) {
                     ScrollView {
-                        // Le repère doit être un enfant direct du contenu de la
-                        // ScrollView. Placé dans la LazyVStack, SwiftUI peut
-                        // conserver sa géométrie initiale et ne jamais publier
-                        // les changements de défilement.
-                        VStack(spacing: 0) {
+                        LazyVStack(spacing: 10, pinnedViews: [.sectionHeaders]) {
+                            // Ancre stable utilisée par le bouton de retour en haut.
                             Color.clear
                                 .frame(height: 1)
                                 .id("recitersTop")
-                                .background {
-                                    GeometryReader { geometry in
-                                        Color.clear.preference(
-                                            key: RecitersScrollOffsetKey.self,
-                                            value: geometry.frame(in: .named("recitersScroll")).minY
-                                        )
+
+                            header
+
+                            if catalog.isLoadingCatalog {
+                                ProgressView("Chargement du catalogue…")
+                                    .tint(Theme.gold)
+                                    .foregroundStyle(Theme.faint)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 60)
+                            } else if results.isEmpty {
+                                EmptyStateView(
+                                    icon: "magnifyingglass",
+                                    title: emptyTitle,
+                                    message: emptyMessage
+                                )
+                            } else if showGroups {
+                                ForEach(grouped) { group in
+                                    Section {
+                                        ForEach(group.reciters) { ReciterRow(reciter: $0) }
+                                    } header: {
+                                        letterHeader(group.id, count: group.reciters.count)
                                     }
                                 }
-
-                            LazyVStack(spacing: 10, pinnedViews: [.sectionHeaders]) {
-                                header
-
-                                if catalog.isLoadingCatalog {
-                                    ProgressView("Chargement du catalogue…")
-                                        .tint(Theme.gold)
-                                        .foregroundStyle(Theme.faint)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 60)
-                                } else if results.isEmpty {
-                                    EmptyStateView(
-                                        icon: "magnifyingglass",
-                                        title: emptyTitle,
-                                        message: emptyMessage
-                                    )
-                                } else if showGroups {
-                                    ForEach(grouped) { group in
-                                        Section {
-                                            ForEach(group.reciters) { ReciterRow(reciter: $0) }
-                                        } header: {
-                                            letterHeader(group.id, count: group.reciters.count)
-                                        }
-                                    }
-                                } else {
-                                    ForEach(results) { ReciterRow(reciter: $0) }
-                                }
+                            } else {
+                                ForEach(results) { ReciterRow(reciter: $0) }
                             }
-                            .padding(.horizontal, 14)
-                            .padding(.bottom, 18)
                         }
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 18)
                     }
                     .scrollIndicators(.hidden)
                     .background(Color.clear)
-                    .coordinateSpace(name: "recitersScroll")
-                    .onPreferenceChange(RecitersScrollOffsetKey.self) { offset in
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            // Afficher le bouton dès que la liste a réellement
-                            // commencé à descendre, pas après plusieurs écrans.
-                            showScrollToTop = offset < -24
-                        }
-                    }
 
-                    if showScrollToTop {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.45)) {
-                                scrollProxy.scrollTo("recitersTop", anchor: .top)
-                            }
-                        } label: {
-                            Image(systemName: "arrow.up.circle.fill")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(Theme.gold)
-                                .frame(width: 48, height: 48)
-                                .background(Circle().fill(Theme.night.opacity(0.55)))
-                                .overlay(
-                                    Circle()
-                                        .stroke(Theme.gold.opacity(0.32), lineWidth: 0.8)
-                                )
-                                .shadow(color: Theme.night.opacity(0.35), radius: 10, y: 4)
+                    // Toujours visible : l'utilisateur peut revenir en haut
+                    // même après un petit défilement, sans seuil ni détection
+                    // de géométrie fragile.
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.45)) {
+                            scrollProxy.scrollTo("recitersTop", anchor: .top)
                         }
-                        .buttonStyle(PressScale(scale: 0.92))
-                        .padding(.trailing, 18)
-                        .padding(.bottom, 16)
-                        .zIndex(10)
-                        .transition(.scale.combined(with: .opacity))
-                        .accessibilityLabel("Remonter en haut")
-                        .accessibilityHint("Retourne au début de la liste des récitateurs")
+                    } label: {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(Theme.night)
+                            .frame(width: 50, height: 50)
+                            .background(Circle().fill(Theme.goldSheen))
+                            .overlay(
+                                Circle()
+                                    .stroke(Theme.ivory.opacity(0.55), lineWidth: 1)
+                            )
+                            .shadow(color: Theme.night.opacity(0.5), radius: 12, y: 5)
                     }
+                    .buttonStyle(PressScale(scale: 0.90))
+                    .padding(.trailing, 18)
+                    .padding(.bottom, 16)
+                    .zIndex(10)
+                    .accessibilityLabel("Remonter en haut")
+                    .accessibilityHint("Retourne au début de la liste des récitateurs")
                 }
                 .navigationBarHidden(true)
             }
@@ -304,14 +282,6 @@ struct RecitersView: View {
     /// Comparaison insensible à la casse et aux diacritiques (« Sudais » trouve « Sudaïs »).
     static func fold(_ s: String) -> String {
         s.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
-    }
-}
-
-private struct RecitersScrollOffsetKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
     }
 }
 
