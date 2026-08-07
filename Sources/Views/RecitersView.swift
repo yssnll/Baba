@@ -68,46 +68,53 @@ struct RecitersView: View {
             ScrollViewReader { scrollProxy in
                 ZStack(alignment: .bottomTrailing) {
                     ScrollView {
-                LazyVStack(spacing: 10, pinnedViews: [.sectionHeaders]) {
-                    Color.clear
-                        .frame(height: 1)
-                        .id("recitersTop")
-                        .background {
-                            GeometryReader { geometry in
-                                Color.clear.preference(
-                                    key: RecitersScrollOffsetKey.self,
-                                    value: geometry.frame(in: .named("recitersScroll")).minY
-                                )
-                            }
-                        }
-                    header
+                        // Le repère doit être un enfant direct du contenu de la
+                        // ScrollView. Placé dans la LazyVStack, SwiftUI peut
+                        // conserver sa géométrie initiale et ne jamais publier
+                        // les changements de défilement.
+                        VStack(spacing: 0) {
+                            Color.clear
+                                .frame(height: 1)
+                                .id("recitersTop")
+                                .background {
+                                    GeometryReader { geometry in
+                                        Color.clear.preference(
+                                            key: RecitersScrollOffsetKey.self,
+                                            value: geometry.frame(in: .named("recitersScroll")).minY
+                                        )
+                                    }
+                                }
 
-                    if catalog.isLoadingCatalog {
-                        ProgressView("Chargement du catalogue…")
-                            .tint(Theme.gold)
-                            .foregroundStyle(Theme.faint)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 60)
-                    } else if results.isEmpty {
-                        EmptyStateView(
-                            icon: "magnifyingglass",
-                            title: emptyTitle,
-                            message: emptyMessage
-                        )
-                    } else if showGroups {
-                        ForEach(grouped) { group in
-                            Section {
-                                ForEach(group.reciters) { ReciterRow(reciter: $0) }
-                            } header: {
-                                letterHeader(group.id, count: group.reciters.count)
+                            LazyVStack(spacing: 10, pinnedViews: [.sectionHeaders]) {
+                                header
+
+                                if catalog.isLoadingCatalog {
+                                    ProgressView("Chargement du catalogue…")
+                                        .tint(Theme.gold)
+                                        .foregroundStyle(Theme.faint)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 60)
+                                } else if results.isEmpty {
+                                    EmptyStateView(
+                                        icon: "magnifyingglass",
+                                        title: emptyTitle,
+                                        message: emptyMessage
+                                    )
+                                } else if showGroups {
+                                    ForEach(grouped) { group in
+                                        Section {
+                                            ForEach(group.reciters) { ReciterRow(reciter: $0) }
+                                        } header: {
+                                            letterHeader(group.id, count: group.reciters.count)
+                                        }
+                                    }
+                                } else {
+                                    ForEach(results) { ReciterRow(reciter: $0) }
+                                }
                             }
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 18)
                         }
-                    } else {
-                        ForEach(results) { ReciterRow(reciter: $0) }
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.bottom, 18)
                     }
                     .scrollIndicators(.hidden)
                     .background(Color.clear)
@@ -124,7 +131,7 @@ struct RecitersView: View {
                                 scrollProxy.scrollTo("recitersTop", anchor: .top)
                             }
                         } label: {
-                            Image(systemName: "arrow.up")
+                            Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 13, weight: .bold))
                                 .foregroundStyle(Theme.gold)
                                 .frame(width: 42, height: 42)
@@ -140,6 +147,8 @@ struct RecitersView: View {
                         .padding(.bottom, 74)
                         .zIndex(10)
                         .transition(.scale.combined(with: .opacity))
+                         .accessibilityLabel("Remonter en haut")
+                         .accessibilityHint("Retourne au début de la liste des récitateurs")
                     }
                 }
                 .navigationBarHidden(true)
