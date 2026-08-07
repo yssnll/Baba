@@ -6,6 +6,7 @@ struct RecitersView: View {
 
     @State private var query = ""
     @State private var filter: ReciterFilter = .all
+    @State private var showScrollToTop = false
     @AppStorage("tilawa.selectedRiwaya") private var selectedRiwayaRaw = Riwaya.all.rawValue
 
     private var selectedRiwaya: Riwaya {
@@ -64,7 +65,9 @@ struct RecitersView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
+            ScrollViewReader { scrollProxy in
+                ZStack(alignment: .bottomTrailing) {
+                    ScrollView {
                 LazyVStack(spacing: 10, pinnedViews: [.sectionHeaders]) {
                     header
 
@@ -94,10 +97,50 @@ struct RecitersView: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.bottom, 18)
+                .id("recitersTop")
+                .background {
+                    GeometryReader { geometry in
+                        Color.clear.preference(
+                            key: RecitersScrollOffsetKey.self,
+                            value: geometry.frame(in: .named("recitersScroll")).minY
+                        )
+                    }
+                }
+                    }
+                    .scrollIndicators(.hidden)
+                    .background(Color.clear)
+                    .coordinateSpace(name: "recitersScroll")
+                    .onPreferenceChange(RecitersScrollOffsetKey.self) { offset in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showScrollToTop = offset < -220
+                        }
+                    }
+
+                    if showScrollToTop {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.45)) {
+                                scrollProxy.scrollTo("recitersTop", anchor: .top)
+                            }
+                        } label: {
+                            Image(systemName: "arrow.up")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Theme.gold)
+                                .frame(width: 42, height: 42)
+                                .background(Circle().fill(Theme.night.opacity(0.55)))
+                                .overlay(
+                                    Circle()
+                                        .stroke(Theme.gold.opacity(0.32), lineWidth: 0.8)
+                                )
+                                .shadow(color: Theme.night.opacity(0.35), radius: 10, y: 4)
+                        }
+                        .buttonStyle(PressScale(scale: 0.92))
+                        .padding(.trailing, 18)
+                        .padding(.bottom, 16)
+                        .transition(.scale.combined(with: .opacity))
+                    }
+                }
+                .navigationBarHidden(true)
             }
-            .scrollIndicators(.hidden)
-            .background(Color.clear)
-            .navigationBarHidden(true)
         }
     }
 
@@ -247,6 +290,14 @@ struct RecitersView: View {
     /// Comparaison insensible à la casse et aux diacritiques (« Sudais » trouve « Sudaïs »).
     static func fold(_ s: String) -> String {
         s.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+    }
+}
+
+private struct RecitersScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 
