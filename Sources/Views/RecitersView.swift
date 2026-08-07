@@ -300,66 +300,71 @@ struct ReciterRow: View {
                     Text(reciter.name)
                         .font(Theme.ui(15, .semibold))
                         .foregroundStyle(Theme.ivory)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     if reciter.hasArabicName {
                         Text(reciter.nameAr)
                             .font(Theme.arabic(13.5))
                             .foregroundStyle(Theme.muted)
-                            .lineLimit(1)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     ScrollView(.horizontal) {
                         HStack(spacing: 5) {
-                        if reciter.hasNameVariants {
-                            Chip(text: "\(reciter.nameVariants.count) orthographes", icon: "textformat")
-                        }
-                        if reciter.custom {
-                            Chip(text: "Ma source", icon: "link", tint: Theme.gold)
-                        }
-                        if reciter.versions.count > 1 {
-                            Chip(text: "\(reciter.versions.count) versions", icon: "square.stack.3d.up")
-                        }
-                        let riwayas = Array(Set(reciter.versions.map(\.riwaya)))
-                            .filter { $0 != .unspecified && $0 != .all }
-                            .sorted { $0.shortTitle < $1.shortTitle }
-                        if !riwayas.isEmpty {
-                            Chip(
-                                text: riwayas.count == 1
-                                    ? riwayas[0].shortTitle
-                                    : "\(riwayas.count) riwayat",
-                                icon: "book.closed"
-                            )
-                        }
-                        if !reciter.completeVersions.isEmpty {
-                            Chip(text: "114 sourates", icon: "checkmark.seal.fill", tint: Theme.emerald)
-                        }
-                        if offlineCount > 0 {
-                            Chip(text: "\(offlineCount) hors ligne",
-                                 icon: "arrow.down.circle.fill", tint: Theme.teal)
-                        }
+                            if reciter.hasNameVariants {
+                                Chip(text: "\(reciter.nameVariants.count) orthographes", icon: "textformat")
+                            }
+                            if reciter.custom {
+                                Chip(text: "Ma source", icon: "link", tint: Theme.gold)
+                            }
+                            if reciter.versions.count > 1 {
+                                Chip(text: "\(reciter.versions.count) versions", icon: "square.stack.3d.up")
+                            }
+                            let riwayas = Array(Set(reciter.versions.map(\.riwaya)))
+                                .filter { $0 != .unspecified && $0 != .all }
+                                .sorted { $0.shortTitle < $1.shortTitle }
+                            if !riwayas.isEmpty {
+                                Chip(
+                                    text: riwayas.count == 1
+                                        ? riwayas[0].shortTitle
+                                        : "\(riwayas.count) riwayat",
+                                    icon: "book.closed"
+                                )
+                            }
+                            if !reciter.completeVersions.isEmpty {
+                                Chip(text: "114 sourates", icon: "checkmark.seal.fill", tint: Theme.emerald)
+                            }
+                            if offlineCount > 0 {
+                                Chip(text: "\(offlineCount) hors ligne",
+                                     icon: "arrow.down.circle.fill", tint: Theme.teal)
+                            }
                         }
                     }
                     .scrollIndicators(.hidden)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(1)
 
-                Spacer(minLength: 2)
+                HStack(spacing: 2) {
+                    Button {
+                        catalog.toggleFavorite(reciter.id)
+                    } label: {
+                        Image(systemName: catalog.isFavorite(reciter.id) ? "star.fill" : "star")
+                            .font(.system(size: 14))
+                            .foregroundStyle(catalog.isFavorite(reciter.id) ? Theme.gold : Theme.faint)
+                            .frame(width: 30, height: 30)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
 
-                Button {
-                    catalog.toggleFavorite(reciter.id)
-                } label: {
-                    Image(systemName: catalog.isFavorite(reciter.id) ? "star.fill" : "star")
-                        .font(.system(size: 14))
-                        .foregroundStyle(catalog.isFavorite(reciter.id) ? Theme.gold : Theme.faint)
-                        .frame(width: 30, height: 30)
-                        .contentShape(Rectangle())
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.faint.opacity(0.7))
+                        .frame(width: 14)
                 }
-                .buttonStyle(.plain)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Theme.faint.opacity(0.7))
+                .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, 11)
             .padding(.vertical, 10)
