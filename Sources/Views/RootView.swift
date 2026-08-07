@@ -10,6 +10,10 @@ struct RootView: View {
 
         ZStack(alignment: .top) {
             LiquidBackdrop()
+                // Le fond doit couvrir toute la fenêtre, y compris les zones
+                // sûres variables selon le modèle d'iPhone.
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea()
 
             Group {
                 switch tab {
@@ -32,6 +36,8 @@ struct RootView: View {
                 .zIndex(3)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.canvas.ignoresSafeArea())
         .id(appearanceKey)
         // En inset de safe area : les listes gagnent automatiquement la marge
         // nécessaire et rien ne se retrouve caché sous le mini-lecteur.
