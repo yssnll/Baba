@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Au3FGc-qXRzte_UpCjUhU"
+uri = "file://attached_assets/tilawa-ipa-latest/Tilawa-unsigned.ipa"
+type = "unspecified"
+title = "Tilawa — IPA corrigée visible dès le défilement"
+description = "Nouvelle IPA compilée avec succès. La flèche de retour en haut est plus grande, placée en bas à droite et apparaît dès le début du défilement. IPA non signée."
