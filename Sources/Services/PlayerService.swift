@@ -2,6 +2,7 @@ import AVFoundation
 import Combine
 import MediaPlayer
 import SwiftUI
+import WidgetKit
 
 enum RepeatMode: Int, CaseIterable {
     case off, all, one
@@ -231,6 +232,7 @@ final class PlayerService: NSObject, ObservableObject {
         duration = 0
         clearResume()
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        updateWidgetSnapshot()
     }
 
     func resumeSavedTrack() {
@@ -403,6 +405,7 @@ final class PlayerService: NSObject, ObservableObject {
     private func refreshNowPlaying() {
         guard let t = current else {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            updateWidgetSnapshot()
             return
         }
         var info: [String: Any] = [
@@ -418,6 +421,28 @@ final class PlayerService: NSObject, ObservableObject {
         if duration > 0 { info[MPMediaItemPropertyPlaybackDuration] = duration }
         if let art = artwork(for: t) { info[MPMediaItemPropertyArtwork] = art }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        updateWidgetSnapshot()
+    }
+
+    /// Les widgets lisent uniquement un petit état sérialisé dans l'App Group.
+    /// Le catalogue et les fichiers audio restent privés à l'application.
+    private func updateWidgetSnapshot() {
+        guard let defaults = UserDefaults(suiteName: TilawaSharedState.appGroup) else { return }
+        if let track = current {
+            defaults.set("\(track.surah.number). \(track.surah.nameTranslit)", forKey: TilawaSharedState.widgetTitle)
+            defaults.set(track.reciterName, forKey: TilawaSharedState.widgetSubtitle)
+            defaults.set(track.reciterId, forKey: TilawaSharedState.widgetReciterID)
+            defaults.set(track.surah.number, forKey: TilawaSharedState.widgetSurahNumber)
+        } else {
+            defaults.removeObject(forKey: TilawaSharedState.widgetTitle)
+            defaults.removeObject(forKey: TilawaSharedState.widgetSubtitle)
+            defaults.removeObject(forKey: TilawaSharedState.widgetReciterID)
+            defaults.removeObject(forKey: TilawaSharedState.widgetSurahNumber)
+        }
+        defaults.set(isPlaying, forKey: TilawaSharedState.widgetIsPlaying)
+        defaults.set(position, forKey: TilawaSharedState.widgetPosition)
+        defaults.set(duration, forKey: TilawaSharedState.widgetDuration)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Vignette dessinée à la volée pour l'écran verrouillé : dégradé, rosette, numéro.

@@ -60,6 +60,63 @@ final class CatalogStore: ObservableObject {
 
     func reciter(id: String) -> Reciter? { allReciters.first { $0.id == id } }
 
+    /// Attend que le catalogue embarqué ou mis en cache soit disponible.
+    /// Siri et les liens des widgets peuvent être exécutés juste après le
+    /// lancement, avant que le décodage hors thread UI soit terminé.
+    func waitUntilReady() async {
+        while isLoadingCatalog {
+            try? await Task.sleep(nanoseconds: 25_000_000)
+        }
+    }
+
+    /// Recherche tolérante aux accents et aux variantes de translittération.
+    /// Les noms prononcés par Siri ne correspondent pas toujours exactement
+    /// au nom affiché dans le catalogue.
+    func reciter(matching query: String) -> Reciter? {
+        let needle = Self.foldForSearch(query)
+        guard !needle.isEmpty else { return nil }
+
+        return allReciters.first { reciter in
+            let candidates = [reciter.name, reciter.nameAr] + reciter.nameVariants
+            return candidates.contains { Self.foldForSearch($0).contains(needle) }
+        }
+    }
+
+    /// Construit une file de lecture à partir d'une sourate demandée.
+    /// La sourate choisie est placée en premier, puis les sourates suivantes
+    /// disponibles du même mushaf sont enchaînées naturellement.
+    func playbackTracks(surahNumber: Int, reciterId: String? = nil,
+                        reciterQuery: String? = nil) -> [Track]? {
+        guard let surah = surah(surahNumber) else { return nil }
+        let selectedReciter: Reciter?
+        if let reciterId {
+            selectedReciter = reciter(id: reciterId)
+        } else if let reciterQuery {
+            selectedReciter = reciter(matching: reciterQuery)
+        } else {
+            selectedReciter = allReciters.first
+        }
+        guard let selectedReciter, let version = selectedReciter.preferredVersion else {
+            return nil
+        }
+
+        let tracks = surahs
+            .filter { $0.number >= surah.number && version.availableSet.contains($0.number) }
+            .map {
+                Track(reciterId: selectedReciter.id, reciterName: selectedReciter.name,
+                      reciterNameAr: selectedReciter.nameAr, recitation: version, surah: $0)
+            }
+        guard let first = tracks.first else { return nil }
+        return [first] + tracks.dropFirst()
+    }
+
+    private static func foldForSearch(_ value: String) -> String {
+        value
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .joined()
+    }
+
     // MARK: - Chargement local
 
     private static func loadSurahsFromDisk() -> [Surah] {

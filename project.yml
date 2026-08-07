@@ -32,6 +32,7 @@ targets:
     platform: iOS
     sources:
       - path: Sources/App
+      - path: Sources/Shared
       - path: Sources/Models
       - path: Sources/Design
       - path: Sources/Services
@@ -39,10 +40,14 @@ targets:
       - path: Sources/Resources
         buildPhase: resources
       - path: Sources/Assets.xcassets
+    dependencies:
+      - target: TilawaWidget
+        embed: true
     settings:
       base:
         PRODUCT_NAME: Tilawa
         PRODUCT_BUNDLE_IDENTIFIER: app.tilawa.player
+        CODE_SIGN_ENTITLEMENTS: Sources/App/Tilawa.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -74,6 +79,28 @@ targets:
         # Autorise les sources personnalisées servies en HTTP simple
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - tilawa
+
+  TilawaWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Sources/Widget
+      - path: Sources/Shared
+    settings:
+      base:
+        PRODUCT_NAME: TilawaWidget
+        PRODUCT_BUNDLE_IDENTIFIER: app.tilawa.player.widget
+        CODE_SIGN_ENTITLEMENTS: Sources/Widget/TilawaWidget.entitlements
+        INFOPLIST_FILE: Sources/Widget/Info.plist
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        DEVELOPMENT_TEAM: ""
 
 # Schéma déclaré explicitement : XcodeGen n'en crée pas d'office, et
 # « xcodebuild -scheme Tilawa » échouerait sans lui.
@@ -82,6 +109,7 @@ schemes:
     build:
       targets:
         Tilawa: all
+        TilawaWidget: all
     run:
       config: Debug
     archive:

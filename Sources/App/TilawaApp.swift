@@ -19,6 +19,9 @@ struct TilawaApp: App {
                 .environmentObject(appearance)
                 .preferredColorScheme(appearance.isLight ? .light : .dark)
                 .tint(appearance.accent)
+                .onOpenURL { url in
+                    Task { await TilawaPlaybackRouter.handle(url: url) }
+                }
         }
     }
 }

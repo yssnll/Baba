@@ -9,6 +9,14 @@ Créé par **Yssnll**.
 
 Interface SwiftUI : verre translucide animé, géométrie islamique vectorielle, palette nuit / émeraude / or.
 
+La version actuelle propose aussi :
+
+- des commandes Siri pour dire « Lis la Fatiha avec Yasser Al-Dossari dans Tilawa » ou « Mets Muaqly dans Tilawa » ;
+- un widget d'écran d'accueil pour reprendre, mettre en pause et passer à la sourate suivante ;
+- une sélection Siri de la sourate et du récitateur à partir du catalogue embarqué.
+
+Pour les widgets, Siri et la lecture depuis l'écran verrouillé, l'application doit être signée avec un compte Apple configuré pour l'App Group `group.app.tilawa`.
+
 ---
 
 ## À lire avant tout : l'état réel du projet
