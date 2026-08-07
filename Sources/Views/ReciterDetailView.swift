@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ReciterDetailView: View {
     let reciter: Reciter
+    let initialRiwaya: Riwaya
 
     @EnvironmentObject private var catalog: CatalogStore
     @EnvironmentObject private var downloads: DownloadManager
@@ -100,7 +101,7 @@ struct ReciterDetailView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
-            selectVersionMatchingGlobalRiwaya()
+            selectVersionMatchingInitialRiwaya()
         }
         .confirmationDialog("Supprimer les fichiers hors ligne de cette version ?",
                             isPresented: $confirmRemoveAll, titleVisibility: .visible) {
@@ -258,11 +259,9 @@ struct ReciterDetailView: View {
         }
     }
 
-    private func selectVersionMatchingGlobalRiwaya() {
-        let raw = UserDefaults.standard.string(forKey: "tilawa.selectedRiwaya")
-            ?? Riwaya.all.rawValue
-        guard let riwaya = Riwaya(rawValue: raw), riwaya != .all,
-              let matchingIndex = reciter.versions.firstIndex(where: { $0.riwaya == riwaya })
+    private func selectVersionMatchingInitialRiwaya() {
+        guard initialRiwaya != .all,
+              let matchingIndex = reciter.versions.firstIndex(where: { $0.riwaya == initialRiwaya })
         else { return }
         versionIndex = matchingIndex
     }

@@ -279,6 +279,11 @@ struct ReciterRow: View {
     let reciter: Reciter
     @EnvironmentObject private var catalog: CatalogStore
     @EnvironmentObject private var downloads: DownloadManager
+    @AppStorage("tilawa.selectedRiwaya") private var selectedRiwayaRaw = Riwaya.all.rawValue
+
+    private var selectedRiwaya: Riwaya {
+        Riwaya(rawValue: selectedRiwayaRaw) ?? .all
+    }
 
     private var offlineCount: Int {
         reciter.versions.reduce(0) { $0 + downloads.downloadedCount(recitationId: $1.id) }
@@ -286,7 +291,7 @@ struct ReciterRow: View {
 
     var body: some View {
         NavigationLink {
-            ReciterDetailView(reciter: reciter)
+            ReciterDetailView(reciter: reciter, initialRiwaya: selectedRiwaya)
         } label: {
             HStack(spacing: 12) {
                 Monogram(reciter: reciter, side: 46)
