@@ -68,7 +68,13 @@ struct RecitersView: View {
                 LazyVStack(spacing: 10, pinnedViews: [.sectionHeaders]) {
                     header
 
-                    if results.isEmpty {
+                    if catalog.isLoadingCatalog {
+                        ProgressView("Chargement du catalogue…")
+                            .tint(Theme.gold)
+                            .foregroundStyle(Theme.faint)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 60)
+                    } else if results.isEmpty {
                         EmptyStateView(
                             icon: "magnifyingglass",
                             title: emptyTitle,

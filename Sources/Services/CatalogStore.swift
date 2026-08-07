@@ -19,30 +19,38 @@ final class CatalogStore: ObservableObject {
     @Published private(set) var lastRefresh: Date?
     @Published var refreshMessage: String?
     @Published private(set) var refreshSucceeded: Bool?
+    @Published private(set) var isLoadingCatalog = true
+    @Published private(set) var riwayaCounts: [Riwaya: Int] = [:]
 
     private let favoritesKey = "tilawa.favorites"
     private let lastRefreshKey = "tilawa.lastRefresh"
 
     private init() {
-        loadSurahs()
-        loadCatalog()
-        loadCustom()
         favorites = Set(UserDefaults.standard.stringArray(forKey: favoritesKey) ?? [])
         lastRefresh = UserDefaults.standard.object(forKey: lastRefreshKey) as? Date
+
+        // Le cache peut contenir plusieurs centaines de récitateurs. Toute
+        // lecture/décodage de fichiers est volontairement hors du thread UI.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let loadedSurahs = Self.loadSurahsFromDisk()
+            let loadedCatalog = Self.loadCatalogFromDisk()
+            let loadedCustom = Self.loadCustomFromDisk()
+
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.surahs = loadedSurahs
+                self.catalog = loadedCatalog
+                self.custom = loadedCustom
+                self.recalculateRiwayaCounts()
+                self.isLoadingCatalog = false
+            }
+        }
     }
 
     /// Sources utilisateur d'abord : ce que l'on a ajouté soi-même doit être à portée de main.
     var allReciters: [Reciter] { custom + catalog }
 
     var totalVersions: Int { allReciters.reduce(0) { $0 + $1.versions.count } }
-
-    var riwayaCounts: [Riwaya: Int] {
-        allReciters
-            .flatMap(\.versions)
-            .reduce(into: [:]) { counts, version in
-                counts[version.riwaya, default: 0] += 1
-            }
-    }
 
     var availableRiwayas: [Riwaya] {
         Riwaya.filterableCases.filter { riwayaCounts[$0, default: 0] > 0 }
@@ -54,23 +62,31 @@ final class CatalogStore: ObservableObject {
 
     // MARK: - Chargement local
 
-    private func loadSurahs() {
+    private static func loadSurahsFromDisk() -> [Surah] {
         if let file: SurahCatalogFile = Self.decodeBundled("surahs") {
-            surahs = file.surahs.sorted { $0.number < $1.number }
+            return file.surahs.sorted { $0.number < $1.number }
         }
+        return []
     }
 
-    private func loadCatalog() {
+    private static func loadCatalogFromDisk() -> [Reciter] {
         // Cache réseau d'abord, bundle en repli.
         if let data = try? Data(contentsOf: Storage.catalogCache),
            let file = try? JSONDecoder().decode(ReciterCatalogFile.self, from: data),
            !file.reciters.isEmpty {
-            catalog = Self.groupExistingReciters(file.reciters)
-            return
+            return Self.groupExistingReciters(file.reciters)
         }
         if let file: ReciterCatalogFile = Self.decodeBundled("reciters") {
-            catalog = Self.groupExistingReciters(file.reciters)
+            return Self.groupExistingReciters(file.reciters)
         }
+        return []
+    }
+
+    private static func loadCustomFromDisk() -> [Reciter] {
+        guard let data = try? Data(contentsOf: Storage.customReciters),
+              let list = try? JSONDecoder().decode([Reciter].self, from: data)
+        else { return [] }
+        return list
     }
 
     private static func decodeBundled<T: Decodable>(_ name: String) -> T? {
@@ -92,9 +108,8 @@ final class CatalogStore: ObservableObject {
     // MARK: - Récitateurs personnalisés
 
     private func loadCustom() {
-        guard let data = try? Data(contentsOf: Storage.customReciters),
-              let list = try? JSONDecoder().decode([Reciter].self, from: data) else { return }
-        custom = list
+        custom = Self.loadCustomFromDisk()
+        recalculateRiwayaCounts()
     }
 
     private func persistCustom() {
@@ -145,6 +160,7 @@ final class CatalogStore: ObservableObject {
             isCustom: true
         )
         custom.insert(reciter, at: 0)
+        recalculateRiwayaCounts()
         persistCustom()
         return nil
     }
@@ -153,6 +169,7 @@ final class CatalogStore: ObservableObject {
         guard let idx = custom.firstIndex(where: { $0.id == id }) else { return }
         for v in custom[idx].versions { Storage.deleteAll(recitationId: v.id) }
         custom.remove(at: idx)
+        recalculateRiwayaCounts()
         persistCustom()
     }
 
@@ -207,11 +224,20 @@ final class CatalogStore: ObservableObject {
 
         await MainActor.run {
             self.catalog = merged
+            self.recalculateRiwayaCounts()
             self.lastRefresh = stamp
             self.refreshMessage = "\(merged.count) récitateurs · \(versions) versions"
             self.refreshSucceeded = true
             self.isRefreshing = false
         }
+    }
+
+    private func recalculateRiwayaCounts() {
+        riwayaCounts = allReciters
+            .flatMap(\.versions)
+            .reduce(into: [:]) { counts, version in
+                counts[version.riwaya, default: 0] += 1
+            }
     }
 
     // MARK: Fournisseurs

@@ -14,6 +14,7 @@ final class DownloadManager: NSObject, ObservableObject {
     /// Sourates présentes sur le disque, indexées par dossier de version.
     @Published private(set) var inventory: [String: Set<Int>] = [:]
     @Published private(set) var totalBytes: Int64 = 0
+    private var lastProgressSent: [String: Double] = [:]
 
     /// Nombre de transferts en cours ou en attente.
     var activeCount: Int { states.values.filter(\.isActive).count }
@@ -52,8 +53,14 @@ final class DownloadManager: NSObject, ObservableObject {
     /// À appeler une fois au lancement : reconstruit l'inventaire et réadopte
     /// les transferts survivants d'une session précédente.
     func bootstrap() {
-        Storage.excludeAudioFromBackup()
-        rebuildInventory()
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            Storage.excludeAudioFromBackup()
+            let inv = Storage.inventory()
+            let size = Storage.totalAudioBytes()
+            DispatchQueue.main.async {
+                self?.applyInventory(inv, totalBytes: size)
+            }
+        }
         session.getAllTasks { [weak self] tasks in
             guard let self else { return }
             let revived: [String: DownloadState] = tasks.reduce(into: [:]) { acc, task in
@@ -66,16 +73,23 @@ final class DownloadManager: NSObject, ObservableObject {
     }
 
     func rebuildInventory() {
-        let inv = Storage.inventory()
-        let size = Storage.totalAudioBytes()
-        DispatchQueue.main.async {
-            self.inventory = inv
-            self.totalBytes = size
-            // Purge les états « terminé » dont le fichier a disparu.
-            for (key, state) in self.states where state == .done {
-                if let p = Self.parse(key), !Storage.exists(recitationId: p.recitationId, surah: p.surah) {
-                    self.states[key] = DownloadState.idle
-                }
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let inv = Storage.inventory()
+            let size = Storage.totalAudioBytes()
+            DispatchQueue.main.async {
+                self?.applyInventory(inv, totalBytes: size)
+            }
+        }
+    }
+
+    private func applyInventory(_ inv: [String: Set<Int>], totalBytes size: Int64) {
+        inventory = inv
+        totalBytes = size
+        // Purge les états « terminé » dont le fichier a disparu.
+        for (key, state) in states where state == .done {
+            if let p = Self.parse(key),
+               !inv[Storage.slug(p.recitationId), default: []].contains(p.surah) {
+                states[key] = DownloadState.idle
             }
         }
     }
@@ -212,6 +226,12 @@ extension DownloadManager: URLSessionDownloadDelegate {
         let fraction = totalBytesExpectedToWrite > 0
             ? Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
             : 0
+        // Les callbacks réseau peuvent arriver plusieurs fois par seconde.
+        // Limiter les publications évite de saturer le thread principal pendant
+        // un téléchargement sans réduire la précision visible par l'utilisateur.
+        let previous = lastProgressSent[key] ?? -1
+        guard fraction >= 1 || fraction - previous >= 0.02 else { return }
+        lastProgressSent[key] = fraction
         setState(key, .downloading(progress: min(max(fraction, 0), 1)))
     }
 
@@ -221,6 +241,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
                     downloadTask: URLSessionDownloadTask,
                     didFinishDownloadingTo location: URL) {
         guard let key = downloadTask.taskDescription, let p = Self.parse(key) else { return }
+        lastProgressSent[key] = 1
 
         let status = (downloadTask.response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(status) else {
