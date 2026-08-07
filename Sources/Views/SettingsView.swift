@@ -261,7 +261,8 @@ struct SettingsView: View {
             SectionHeader(title: "À propos")
 
             VStack(alignment: .leading, spacing: 7) {
-                row("Version", "1.0.0")
+                row("Version", "3.4")
+                row("Créé par", "Yssnll")
                 row("Sourates", "114 · métadonnées embarquées")
                 row("Sources audio", "MP3Quran · QuranicAudio")
             }
