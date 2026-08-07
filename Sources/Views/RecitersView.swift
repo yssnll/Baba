@@ -117,16 +117,23 @@ struct RecitersView: View {
                             .font(.system(size: 20, weight: .bold))
                             .foregroundStyle(Theme.night)
                             .frame(width: 50, height: 50)
-                            .background(Circle().fill(Theme.goldSheen))
+                            .background(
+                                Circle()
+                                    .fill(Theme.goldSheen.opacity(0.72))
+                                    .background(.ultraThinMaterial, in: Circle())
+                            )
                             .overlay(
                                 Circle()
-                                    .stroke(Theme.ivory.opacity(0.55), lineWidth: 1)
+                                    .stroke(Theme.ivory.opacity(0.42), lineWidth: 1)
                             )
                             .shadow(color: Theme.night.opacity(0.5), radius: 12, y: 5)
                     }
                     .buttonStyle(PressScale(scale: 0.90))
                     .padding(.trailing, 18)
-                    .padding(.bottom, 16)
+                    // La barre d'onglets est ajoutée par RootView via un
+                    // safeAreaInset. Ce décalage place le bouton juste
+                    // au-dessus de cette barre, sans passer dessous.
+                    .padding(.bottom, 82)
                     .zIndex(10)
                     .accessibilityLabel("Remonter en haut")
                     .accessibilityHint("Retourne au début de la liste des récitateurs")
