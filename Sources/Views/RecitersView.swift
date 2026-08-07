@@ -69,6 +69,17 @@ struct RecitersView: View {
                 ZStack(alignment: .bottomTrailing) {
                     ScrollView {
                 LazyVStack(spacing: 10, pinnedViews: [.sectionHeaders]) {
+                    Color.clear
+                        .frame(height: 1)
+                        .id("recitersTop")
+                        .background {
+                            GeometryReader { geometry in
+                                Color.clear.preference(
+                                    key: RecitersScrollOffsetKey.self,
+                                    value: geometry.frame(in: .named("recitersScroll")).minY
+                                )
+                            }
+                        }
                     header
 
                     if catalog.isLoadingCatalog {
@@ -97,15 +108,6 @@ struct RecitersView: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.bottom, 18)
-                .id("recitersTop")
-                .background {
-                    GeometryReader { geometry in
-                        Color.clear.preference(
-                            key: RecitersScrollOffsetKey.self,
-                            value: geometry.frame(in: .named("recitersScroll")).minY
-                        )
-                    }
-                }
                     }
                     .scrollIndicators(.hidden)
                     .background(Color.clear)
@@ -135,7 +137,8 @@ struct RecitersView: View {
                         }
                         .buttonStyle(PressScale(scale: 0.92))
                         .padding(.trailing, 18)
-                        .padding(.bottom, 16)
+                        .padding(.bottom, 74)
+                        .zIndex(10)
                         .transition(.scale.combined(with: .opacity))
                     }
                 }
