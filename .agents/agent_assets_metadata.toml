@@ -14,3 +14,10 @@ uri = "file://attached_assets/tilawa-ipa-rebuilt/Tilawa-unsigned.ipa"
 type = "unspecified"
 title = "Tilawa — IPA avec bouton flèche reconstruit"
 description = "Version recompilée avec une flèche toujours visible en bas à droite. Elle remonte directement au début de la liste des récitateurs. IPA non signée."
+
+[[outputs]]
+id = "Wwx7MTiF9iLejGrtOMwiu"
+uri = "file://attached_assets/tilawa-ipa-tabbar-fix/Tilawa-unsigned.ipa"
+type = "unspecified"
+title = "Tilawa — IPA avec flèche au-dessus de la barre"
+description = "Version compilée avec succès : bouton flèche accessible juste au-dessus de la barre Récitateurs / Hors ligne / Réglages, avec un fond légèrement transparent. IPA non signée."
