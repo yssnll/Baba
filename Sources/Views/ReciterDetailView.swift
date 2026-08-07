@@ -99,6 +99,9 @@ struct ReciterDetailView: View {
         .background(LiquidBackdrop().opacity(0.9))
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear {
+            selectVersionMatchingGlobalRiwaya()
+        }
         .confirmationDialog("Supprimer les fichiers hors ligne de cette version ?",
                             isPresented: $confirmRemoveAll, titleVisibility: .visible) {
             Button("Supprimer \(offlineCount) fichier\(offlineCount > 1 ? "s" : "")", role: .destructive) {
@@ -210,6 +213,12 @@ struct ReciterDetailView: View {
                                 Text(v.shortLabel)
                                     .font(Theme.ui(12.5, .semibold))
                                     .lineLimit(1)
+                                Text(v.riwaya.title)
+                                    .font(Theme.ui(9.5, .medium))
+                                    .lineLimit(1)
+                                    .foregroundStyle(versionIndex == idx
+                                                     ? Theme.night.opacity(0.72)
+                                                     : Theme.gold.opacity(0.85))
                                 if !v.sourceName.isEmpty && v.sourceName != reciter.name {
                                     Text(v.sourceName)
                                         .font(Theme.ui(9.5, .regular))
@@ -247,6 +256,15 @@ struct ReciterDetailView: View {
             }
             .scrollIndicators(.hidden)
         }
+    }
+
+    private func selectVersionMatchingGlobalRiwaya() {
+        let raw = UserDefaults.standard.string(forKey: "tilawa.selectedRiwaya")
+            ?? Riwaya.all.rawValue
+        guard let riwaya = Riwaya(rawValue: raw), riwaya != .all,
+              let matchingIndex = reciter.versions.firstIndex(where: { $0.riwaya == riwaya })
+        else { return }
+        versionIndex = matchingIndex
     }
 
     // MARK: Actions groupées

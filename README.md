@@ -153,6 +153,12 @@ L'audio est diffusé depuis :
 - **MP3Quran.net** — 241 récitateurs, plusieurs riwayat
 - **QuranicAudio.com** — 176 récitateurs
 
+Les riwayat identifiées dans les métadonnées MP3Quran sont sélectionnables
+depuis l'écran des récitateurs : Hafs ‘an ‘Asim, Warsh ‘an Nafi‘, Khalaf ‘an
+Hamzah, Qalun ‘an Nafi‘, Ibn Kathir, Abu ‘Amr, Ya‘qub, Al-Kisa’i, Ibn ‘Amir,
+Abu Ja‘far et Shu‘bah ‘an ‘Asim. Le filtre est mémorisé ; à l'intérieur d'un
+récitateur, le choix de la version audio reste disponible.
+
 Fusionnés par nom arabe normalisé : un même récitateur apparaît une fois, ses différentes versions regroupées.
 
 **Tilawa ne redistribue aucun fichier.** Elle pointe vers ces serveurs et met en cache ce que tu choisis d'écouter hors ligne. Ces plateformes sont portées par des associations et vivent de dons : évite les téléchargements massifs. L'app limite volontairement à **2 connexions simultanées** pour cette raison.

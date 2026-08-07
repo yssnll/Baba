@@ -1,5 +1,76 @@
 import Foundation
 
+// MARK: - Riwaya
+
+/// Les voies de récitation exposées par les sources audio.
+/// `unspecified` est utilisé quand un fournisseur ne donne pas cette
+/// information dans ses métadonnées.
+enum Riwaya: String, CaseIterable, Codable, Hashable, Identifiable {
+    case all = "all"
+    case hafs = "hafs"
+    case warsh = "warsh"
+    case khalaf = "khalaf"
+    case qalun = "qalun"
+    case ibnKathir = "ibn-kathir"
+    case abuAmr = "abu-amr"
+    case yaqub = "yaqub"
+    case kisaai = "kisaai"
+    case ibnAmir = "ibn-amir"
+    case abuJafar = "abu-jafar"
+    case shubah = "shubah"
+    case unspecified = "unspecified"
+
+    var id: String { rawValue }
+
+    static var filterableCases: [Riwaya] {
+        allCases.filter { $0 != .all && $0 != .unspecified }
+    }
+
+    var title: String {
+        switch self {
+        case .all:         return "Toutes"
+        case .hafs:        return "Hafs ‘an ‘Asim"
+        case .warsh:       return "Warsh ‘an Nafi‘"
+        case .khalaf:      return "Khalaf ‘an Hamzah"
+        case .qalun:       return "Qalun ‘an Nafi‘"
+        case .ibnKathir:   return "Ibn Kathir"
+        case .abuAmr:      return "Abu ‘Amr"
+        case .yaqub:       return "Ya‘qub"
+        case .kisaai:      return "Al-Kisa’i"
+        case .ibnAmir:     return "Ibn ‘Amir"
+        case .abuJafar:    return "Abu Ja‘far"
+        case .shubah:      return "Shu‘bah ‘an ‘Asim"
+        case .unspecified: return "Riwaya non précisée"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .all:         return "Toutes"
+        case .hafs:        return "Hafs"
+        case .warsh:       return "Warsh"
+        case .khalaf:      return "Khalaf"
+        case .qalun:       return "Qalun"
+        case .ibnKathir:   return "Ibn Kathir"
+        case .abuAmr:      return "Abu ‘Amr"
+        case .yaqub:       return "Ya‘qub"
+        case .kisaai:      return "Al-Kisa’i"
+        case .ibnAmir:     return "Ibn ‘Amir"
+        case .abuJafar:    return "Abu Ja‘far"
+        case .shubah:      return "Shu‘bah"
+        case .unspecified: return "Non précisée"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .all: return "square.grid.2x2"
+        case .unspecified: return "questionmark.circle"
+        default: return "book.closed"
+        }
+    }
+}
+
 // MARK: - Sourate
 
 /// Métadonnées d'une sourate. Chargées depuis `surahs.json` (embarqué, donc hors ligne).
@@ -99,6 +170,64 @@ struct Recitation: Codable, Identifiable, Hashable {
             .replacingOccurrences(of: "Rewayat ", with: "")
             .replacingOccurrences(of: "Rewaya ", with: "")
             .trimmingCharacters(in: .whitespaces)
+    }
+
+    /// Riwaya déduite des noms officiels fournis par MP3Quran.
+    /// Les noms de QuranicAudio qui ne précisent pas de voie restent
+    /// volontairement dans « non précisée » plutôt que d'être devinés.
+    var riwaya: Riwaya {
+        let text = "\(label) \(labelAr)".foldedForRiwaya
+
+        if text.contains("khalaf") || text.contains("خلف") { return .khalaf }
+        if text.contains("warsh") || text.contains("ورش") { return .warsh }
+        if text.contains("hafs") || text.contains("حفص") { return .hafs }
+        if text.contains("qalun") || text.contains("qalon") || text.contains("قالون") {
+            return .qalun
+        }
+        if text.contains("qunbol") || text.contains("qonbol")
+            || text.contains("albizi") || text.contains("bazi")
+            || text.contains("ابن كثير") || text.contains("البزي")
+            || text.contains("قنبل") {
+            return .ibnKathir
+        }
+        if text.contains("rowis") || text.contains("rawh")
+            || text.contains("yaqub") || text.contains("yakoub")
+            || text.contains("يعقوب") {
+            return .yaqub
+        }
+        if text.contains("kisa") || text.contains("kisai")
+            || text.contains("dorai") || text.contains("الكسائي") {
+            return .kisaai
+        }
+        if text.contains("thakwan") || text.contains("hesham")
+            || text.contains("ibn amer") || text.contains("ibn amir")
+            || text.contains("ابن عامر") {
+            return .ibnAmir
+        }
+        if text.contains("jammaz") || text.contains("jafar")
+            || text.contains("abu jafar") || text.contains("ابن جعفر") {
+            return .abuJafar
+        }
+        if text.contains("shubah") || text.contains("shobah")
+            || text.contains("shu bah") || text.contains("شعبة") {
+            return .shubah
+        }
+        if text.contains("assosi") || text.contains("susi")
+            || text.contains("aldori") || text.contains("dori")
+            || text.contains("abu amr") || text.contains("abi amr")
+            || text.contains("السوسي") || text.contains("الدوري") {
+            return .abuAmr
+        }
+        return .unspecified
+    }
+}
+
+private extension String {
+    var foldedForRiwaya: String {
+        folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+            .replacingOccurrences(of: "’", with: "'")
+            .replacingOccurrences(of: "‘", with: "'")
+            .replacingOccurrences(of: "ʼ", with: "'")
     }
 }
 

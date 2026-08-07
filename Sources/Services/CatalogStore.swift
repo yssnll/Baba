@@ -36,6 +36,18 @@ final class CatalogStore: ObservableObject {
 
     var totalVersions: Int { allReciters.reduce(0) { $0 + $1.versions.count } }
 
+    var riwayaCounts: [Riwaya: Int] {
+        allReciters
+            .flatMap(\.versions)
+            .reduce(into: [:]) { counts, version in
+                counts[version.riwaya, default: 0] += 1
+            }
+    }
+
+    var availableRiwayas: [Riwaya] {
+        Riwaya.filterableCases.filter { riwayaCounts[$0, default: 0] > 0 }
+    }
+
     func surah(_ number: Int) -> Surah? { surahs.first { $0.number == number } }
 
     func reciter(id: String) -> Reciter? { allReciters.first { $0.id == id } }

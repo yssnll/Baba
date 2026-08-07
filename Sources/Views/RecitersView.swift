@@ -6,9 +6,17 @@ struct RecitersView: View {
 
     @State private var query = ""
     @State private var filter: ReciterFilter = .all
+    @AppStorage("tilawa.selectedRiwaya") private var selectedRiwayaRaw = Riwaya.all.rawValue
+
+    private var selectedRiwaya: Riwaya {
+        Riwaya(rawValue: selectedRiwayaRaw) ?? .all
+    }
 
     private var results: [Reciter] {
-        let base = catalog.allReciters
+        let base = catalog.allReciters.filter { reciter in
+            selectedRiwaya == .all
+                || reciter.versions.contains { $0.riwaya == selectedRiwaya }
+        }
         let trimmed = query.trimmingCharacters(in: .whitespaces)
 
         let filtered = base.filter { r in
@@ -122,8 +130,55 @@ struct RecitersView: View {
                 .padding(.vertical, 1)
             }
             .scrollIndicators(.hidden)
+
+            ScrollView(.horizontal) {
+                HStack(spacing: 7) {
+                    riwayaChip(.all)
+                    ForEach(catalog.availableRiwayas) { riwaya in
+                        riwayaChip(riwaya)
+                    }
+                }
+                .padding(.vertical, 1)
+            }
+            .scrollIndicators(.hidden)
         }
         .padding(.bottom, 4)
+    }
+
+    private func riwayaChip(_ riwaya: Riwaya) -> some View {
+        let selected = selectedRiwaya == riwaya
+        let count = riwaya == .all
+            ? catalog.totalVersions
+            : catalog.riwayaCounts[riwaya, default: 0]
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedRiwayaRaw = riwaya.rawValue
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: riwaya.icon)
+                    .font(.system(size: 10, weight: .semibold))
+                Text(riwaya.shortTitle)
+                    .font(Theme.ui(10.5, .semibold))
+                Text("\(count)")
+                    .font(Theme.mono(9, .medium))
+                    .opacity(0.72)
+            }
+            .foregroundStyle(selected ? Theme.night : Theme.muted)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background {
+                if selected {
+                    Capsule().fill(Theme.goldSheen)
+                } else {
+                    Capsule()
+                        .fill(Color.white.opacity(0.055))
+                        .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.7))
+                }
+            }
+        }
+        .buttonStyle(PressScale(scale: 0.97))
     }
 
     private var headerSummary: String {
@@ -133,6 +188,9 @@ struct RecitersView: View {
         }
         if filter != .all {
             return "\(count) récitant\(count > 1 ? "s" : "") · \(filter.title)"
+        }
+        if selectedRiwaya != .all {
+            return "\(count) récitant\(count > 1 ? "s" : "") · \(selectedRiwaya.title)"
         }
         return "\(catalog.allReciters.count) récitant\(catalog.allReciters.count > 1 ? "s" : "") · \(catalog.totalVersions) versions"
     }
@@ -249,6 +307,17 @@ struct ReciterRow: View {
                         }
                         if reciter.versions.count > 1 {
                             Chip(text: "\(reciter.versions.count) versions", icon: "square.stack.3d.up")
+                        }
+                        let riwayas = Array(Set(reciter.versions.map(\.riwaya)))
+                            .filter { $0 != .unspecified && $0 != .all }
+                            .sorted { $0.shortTitle < $1.shortTitle }
+                        if !riwayas.isEmpty {
+                            Chip(
+                                text: riwayas.count == 1
+                                    ? riwayas[0].shortTitle
+                                    : "\(riwayas.count) riwayat",
+                                icon: "book.closed"
+                            )
                         }
                         if !reciter.completeVersions.isEmpty {
                             Chip(text: "114 sourates", icon: "checkmark.seal.fill", tint: Theme.emerald)
