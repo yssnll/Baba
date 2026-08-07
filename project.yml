@@ -92,7 +92,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: TilawaWidget
-        PRODUCT_BUNDLE_IDENTIFIER: app.tilawa.player.widget
+        PRODUCT_BUNDLE_IDENTIFIER: app.tilawa.player.TilawaWidget
         CODE_SIGN_ENTITLEMENTS: Sources/Widget/TilawaWidget.entitlements
         INFOPLIST_FILE: Sources/Widget/Info.plist
         APPLICATION_EXTENSION_API_ONLY: YES
