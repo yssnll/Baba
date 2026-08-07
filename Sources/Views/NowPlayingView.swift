@@ -12,7 +12,7 @@ struct NowPlayingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var halo = false
-    @State private var dragOffset: CGFloat = 0
+    @GestureState private var interactiveDragOffset: CGFloat = 0
 
     private var track: Track? { player.current }
 
@@ -29,7 +29,11 @@ struct NowPlayingView: View {
                     let contentWidth = max(0, geo.size.width - safe.leading - safe.trailing)
                     let contentHeight = max(0, geo.size.height - safe.top - safe.bottom)
 
-                    content(track, in: CGSize(width: contentWidth, height: contentHeight))
+                    content(
+                        track,
+                        in: CGSize(width: contentWidth, height: contentHeight),
+                        safeTop: safe.top
+                    )
                         .frame(width: contentWidth, height: contentHeight, alignment: .top)
                         .padding(.top, safe.top)
                         .padding(.bottom, safe.bottom)
@@ -37,10 +41,15 @@ struct NowPlayingView: View {
                         .padding(.trailing, safe.trailing)
                 }
                 .ignoresSafeArea()
-                .offset(y: dragOffset)
+                // Un seul geste pour toute la surface du lecteur. La partie
+                // interactive est portée par @GestureState : elle revient
+                // naturellement à zéro entre deux mouvements et évite les
+                // oscillations provoquées par plusieurs gestes imbriqués.
+                .simultaneousGesture(dismissDrag)
+                .offset(y: interactiveDragOffset)
             } else {
                 VStack {
-                    closeBar
+                    closeBar()
                     Spacer()
                     EmptyStateView(icon: "music.note", title: "Rien en lecture",
                                    message: "Choisis un récitateur puis une sourate.")
@@ -63,10 +72,11 @@ struct NowPlayingView: View {
     /// Répartit l'espace selon la hauteur utile. `tight` déclenche la variante
     /// compacte (petits écrans) : ornement réduit, marges resserrées.
     @ViewBuilder
-    private func content(_ track: Track, in size: CGSize) -> some View {
+    private func content(_ track: Track, in size: CGSize, safeTop: CGFloat) -> some View {
         let h = size.height
         let tight = h < 620
         let compact = h < 700
+        let closeBarTop = adaptiveCloseBarTop(for: h, safeTop: safeTop)
         // La scène centrale garde une taille généreuse, mais ne peut plus
         // consommer l'espace réservé aux contrôles sur un petit iPhone.
         let art = min(
@@ -76,13 +86,11 @@ struct NowPlayingView: View {
         let gap: CGFloat = tight ? 5 : compact ? 9 : 14
 
         VStack(spacing: 0) {
-            closeBar
-                .simultaneousGesture(dismissDrag)
+            closeBar(topPadding: closeBarTop)
 
             Spacer(minLength: tight ? 0 : compact ? 2 : 6)
 
             artworkStage(for: track, side: art)
-                .gesture(dismissDrag)
 
             Spacer(minLength: gap)
 
@@ -118,7 +126,7 @@ struct NowPlayingView: View {
     }
 
     /// Barre supérieure : fermeture explicite à gauche, poignée au centre.
-    private var closeBar: some View {
+    private func closeBar(topPadding: CGFloat = 32) -> some View {
         ZStack {
             Capsule()
                 .fill(Theme.ivory.opacity(0.26))
@@ -149,11 +157,20 @@ struct NowPlayingView: View {
         // Laisser une vraie marge sous l'heure système : sur les appareils
         // avec encoche, la flèche ne doit jamais se retrouver sous la barre
         // d'état. Cette marge abaisse aussi légèrement tout le lecteur.
-        .padding(.top, 32)
+        .padding(.top, topPadding)
         .padding(.bottom, 7)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
         .zIndex(2)
+    }
+
+    /// Adapte la position de la barre aux dimensions réelles de l'appareil.
+    /// On utilise la géométrie et la safe area plutôt qu'un modèle d'iPhone
+    /// codé en dur : cela couvre aussi les futurs appareils et l'orientation.
+    private func adaptiveCloseBarTop(for height: CGFloat, safeTop: CGFloat) -> CGFloat {
+        let screenFactor = min(max(height / 760, 0.88), 1.12)
+        let notchExtra: CGFloat = safeTop > 20 ? 4 : 0
+        return min(48, max(38, 40 * screenFactor + notchExtra))
     }
 
     /// Surface de présentation qui donne à la rosette une vraie place dans le
@@ -201,17 +218,18 @@ struct NowPlayingView: View {
     /// afin de ne pas voler ses gestes à la tête de lecture.
     private var dismissDrag: some Gesture {
         DragGesture()
-            .onChanged { value in
-                if value.translation.height > 0 { dragOffset = value.translation.height }
+            .updating($interactiveDragOffset) { value, state, _ in
+                let vertical = value.translation.height
+                let horizontal = abs(value.translation.width)
+                guard vertical > 0, vertical > horizontal else {
+                    state = 0
+                    return
+                }
+                state = vertical
             }
             .onEnded { value in
                 if value.translation.height > 110 {
                     dismiss()
-                    dragOffset = 0
-                } else {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        dragOffset = 0
-                    }
                 }
             }
     }
