@@ -21,3 +21,10 @@ uri = "file://attached_assets/tilawa-ipa-tabbar-fix/Tilawa-unsigned.ipa"
 type = "unspecified"
 title = "Tilawa — IPA avec flèche au-dessus de la barre"
 description = "Version compilée avec succès : bouton flèche accessible juste au-dessus de la barre Récitateurs / Hors ligne / Réglages, avec un fond légèrement transparent. IPA non signée."
+
+[[outputs]]
+id = "tjnn4-J1pg4wfvlYTZuHS"
+uri = "file://attached_assets/tilawa-fullscreen-background/Tilawa-unsigned.ipa"
+type = "unspecified"
+title = "Tilawa — IPA avec fond plein écran"
+description = "Version compilée avec succès : le fond des onglets Hors ligne et Réglages couvre toute la fenêtre, y compris les zones hautes et basses selon le modèle d’iPhone. IPA non signée."
