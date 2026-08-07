@@ -117,8 +117,8 @@ Tes sources apparaissent en tête de liste, avec les 114 sourates et le téléch
 
 ## Ce que fait l'app
 
-- **Récitateurs** — recherche insensible aux accents (latin et arabe), filtres *Tous / Favoris / Mushaf complet / Hors ligne*, regroupement alphabétique, favoris.
-- **Détail** — sélecteur de riwaya quand le récitateur en propose plusieurs (Hafs, Warsh, murattal, mujawwad…), les 114 sourates, téléchargement à l'unité ou en bloc.
+- **Récitateurs** — recherche insensible aux accents (latin et arabe), regroupement des variantes de translittération d'une même personne, filtres *Tous / Favoris / Mushaf complet / Hors ligne*, regroupement alphabétique, favoris.
+- **Détail** — sélecteur de riwaya et de source quand le récitateur en propose plusieurs (Hafs, Warsh, murattal, mujawwad…), avec le nom exact fourni par chaque source, les 114 sourates, téléchargement à l'unité ou en bloc.
 - **Lecteur** — arrière-plan et écran verrouillé, contrôles depuis le centre de contrôle et les AirPods, vignette dessinée à la volée, ±15 s, répétition sourate/série, reprise après interruption, pause au débranchement du casque.
 - **Hors ligne** — regroupé par récitateur et version, poids par groupe, suppression fine ou globale, suivi des transferts en cours.
 - **Réglages** — synchronisation, Wi-Fi uniquement, sources personnalisées, gestion du stockage.
@@ -167,5 +167,5 @@ Les métadonnées des sourates (noms arabes, translittérations, noms français,
 - Sans réseau **et** sans téléchargement, la lecture échoue — avec un message explicite.
 - Certaines versions n'exposent pas les 114 sourates ; seules celles réellement disponibles sont affichées.
 - Les noms des récitateurs viennent des fournisseurs : quelques translittérations sont approximatives.
-- La fusion par nom arabe rapproche l'essentiel des doublons, pas la totalité : un récitateur peut apparaître deux fois si les deux sources l'orthographient différemment sans nom arabe commun.
+- Les noms sont regroupés par identité arabe ou translittération normalisée ; les variantes d'orthographe restent visibles et chaque version audio garde son nom de source sélectionnable.
 - Pas de lecture verset par verset ni de texte coranique affiché — l'app est un lecteur audio.

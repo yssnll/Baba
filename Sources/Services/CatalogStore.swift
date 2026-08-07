@@ -53,11 +53,11 @@ final class CatalogStore: ObservableObject {
         if let data = try? Data(contentsOf: Storage.catalogCache),
            let file = try? JSONDecoder().decode(ReciterCatalogFile.self, from: data),
            !file.reciters.isEmpty {
-            catalog = file.reciters
+            catalog = Self.groupExistingReciters(file.reciters)
             return
         }
         if let file: ReciterCatalogFile = Self.decodeBundled("reciters") {
-            catalog = file.reciters
+            catalog = Self.groupExistingReciters(file.reciters)
         }
     }
 
@@ -119,6 +119,7 @@ final class CatalogStore: ObservableObject {
             provider: "custom",
             label: versionLabel.isEmpty ? "Ma source" : versionLabel,
             labelAr: "",
+            sourceName: name,
             urlTemplate: template,
             surahList: Array(1...114)
         )
@@ -128,6 +129,7 @@ final class CatalogStore: ObservableObject {
             nameAr: nameAr.trimmingCharacters(in: .whitespacesAndNewlines),
             letter: String(name.prefix(1)).uppercased(),
             versions: [recitation],
+            nameVariants: [name],
             isCustom: true
         )
         custom.insert(reciter, at: 0)
@@ -268,24 +270,32 @@ final class CatalogStore: ObservableObject {
         var byLatin: [String: Int] = [:]
 
         func index(name: String, nameAr: String) -> Int {
-            let ka = normalizeArabic(nameAr)
+            let displayName = cleanDisplayName(tidy(name))
+            let ka = arabicIdentity(nameAr)
             let kl = normalizeLatin(name)
             var found: Int?
             if !ka.isEmpty { found = byArabic[ka] }
-            if found == nil, !kl.isEmpty { found = byLatin[kl] }
+            if found == nil, !kl.isEmpty { found = byLatin[latinIdentity(name)] }
 
             if let i = found {
+                people[i].nameVariants = uniqueNames(people[i].nameVariants + [displayName])
                 if people[i].nameAr.isEmpty, !nameAr.isEmpty { people[i].nameAr = nameAr }
                 if !ka.isEmpty, byArabic[ka] == nil { byArabic[ka] = i }
-                if !kl.isEmpty, byLatin[kl] == nil { byLatin[kl] = i }
+                if !kl.isEmpty {
+                    byLatin[kl] = i
+                    byLatin[latinIdentity(name)] = i
+                }
                 return i
             }
-            people.append(Reciter(id: "", name: name, nameAr: nameAr,
-                                  letter: String(name.prefix(1)).uppercased(),
-                                  versions: [], isCustom: nil))
+            people.append(Reciter(id: "", name: displayName, nameAr: nameAr,
+                                  letter: String(displayName.prefix(1)).uppercased(),
+                                  versions: [], nameVariants: [displayName], isCustom: nil))
             let i = people.count - 1
             if !ka.isEmpty { byArabic[ka] = i }
-            if !kl.isEmpty { byLatin[kl] = i }
+            if !kl.isEmpty {
+                byLatin[kl] = i
+                byLatin[latinIdentity(name)] = i
+            }
             return i
         }
 
@@ -306,6 +316,7 @@ final class CatalogStore: ObservableObject {
                     provider: "mp3quran",
                     label: tidy(m.name),
                     labelAr: tidy(arMoshafs[m.id] ?? ""),
+                    sourceName: tidy(entry.en.name),
                     urlTemplate: server + "{sss}.mp3",
                     surahList: list.sorted()
                 ))
@@ -323,6 +334,7 @@ final class CatalogStore: ObservableObject {
                 provider: "quranicaudio",
                 label: "Mushaf complet (QuranicAudio)",
                 labelAr: "المصحف كامل",
+                sourceName: tidy(q.name),
                 urlTemplate: "https://download.quranicaudio.com/quran/\(path){sss}.mp3",
                 surahList: Array(1...114)
             ))
@@ -341,6 +353,85 @@ final class CatalogStore: ObservableObject {
         }
         out.sort { $0.name.lowercased() < $1.name.lowercased() }
         return out
+    }
+
+    /// Regroupe aussi les doublons déjà présents dans le JSON embarqué ou le
+    /// cache. Ainsi la correction est visible immédiatement, sans attendre une
+    /// nouvelle synchronisation réseau.
+    private static func groupExistingReciters(_ input: [Reciter]) -> [Reciter] {
+        var grouped: [Reciter] = []
+        var indexes: [String: Int] = [:]
+
+        for original in input {
+            let name = tidy(original.name)
+            let keys = identityKeys(name: name, nameAr: original.nameAr)
+            let index = keys.compactMap { indexes[$0] }.first ?? {
+                var copy = original
+                copy.name = cleanDisplayName(name)
+                copy.letter = String(copy.name.prefix(1)).uppercased()
+                copy.nameVariants = uniqueNames(original.nameVariants + [name])
+                copy.versions = []
+                grouped.append(copy)
+                return grouped.count - 1
+            }()
+
+            for key in keys where indexes[key] == nil { indexes[key] = index }
+            merge(original, into: &grouped[index])
+        }
+
+        for idx in grouped.indices {
+            grouped[idx].versions = uniqueVersions(grouped[idx].versions)
+            grouped[idx].versions.sort {
+                $0.surahList.count != $1.surahList.count
+                    ? $0.surahList.count > $1.surahList.count
+                    : $0.label < $1.label
+            }
+            grouped[idx].nameVariants = uniqueNames(grouped[idx].nameVariants)
+        }
+        return grouped.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private static func identityKeys(name: String, nameAr: String) -> [String] {
+        var keys = ["latin:\(latinIdentity(name))"]
+        let arabic = arabicIdentity(nameAr)
+        if !arabic.isEmpty { keys.append("arabic:\(arabic)") }
+        return keys
+    }
+
+    private static func merge(_ source: Reciter, into target: inout Reciter) {
+        target.nameVariants = uniqueNames(target.nameVariants + [source.name])
+        if target.nameAr.isEmpty, !source.nameAr.isEmpty { target.nameAr = source.nameAr }
+        target.versions.append(contentsOf: source.versions.map { version in
+            if version.sourceName.isEmpty {
+                return Recitation(id: version.id, provider: version.provider,
+                                  label: version.label, labelAr: version.labelAr,
+                                  sourceName: source.name, urlTemplate: version.urlTemplate,
+                                  surahList: version.surahList)
+            }
+            return version
+        })
+    }
+
+    private static func uniqueVersions(_ versions: [Recitation]) -> [Recitation] {
+        var seen = Set<String>()
+        return versions.filter { seen.insert($0.id).inserted }
+    }
+
+    private static func uniqueNames(_ names: [String]) -> [String] {
+        var seen = Set<String>()
+        return names
+            .map { cleanDisplayName(tidy($0)) }
+            .filter { !$0.isEmpty && seen.insert(latinIdentity($0)).inserted }
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+
+    private static func cleanDisplayName(_ name: String) -> String {
+        let withoutQualifier = name.replacingOccurrences(
+            of: #"\s*(\[[^]]+\]|\([^)]*\))\s*$"#,
+            with: "",
+            options: .regularExpression
+        )
+        return tidy(withoutQualifier).isEmpty ? name : tidy(withoutQualifier)
     }
 
     private static func tidy(_ s: String) -> String {
@@ -366,6 +457,21 @@ final class CatalogStore: ObservableObject {
                          .map(Character.init))
     }
 
+    private static func arabicIdentity(_ s: String) -> String {
+        var value = s
+        value = value.replacingOccurrences(
+            of: #"\s*[-–—].*$"#,
+            with: "",
+            options: .regularExpression
+        )
+        value = value.replacingOccurrences(
+            of: #"\s*(\[[^]]+\]|\([^)]*\)).*$"#,
+            with: "",
+            options: .regularExpression
+        )
+        return normalizeArabic(value)
+    }
+
     private static func normalizeLatin(_ s: String) -> String {
         let stop: Set<String> = ["al", "el", "as", "ash", "ad", "abu", "abd",
                                  "ibn", "bin", "sheikh", "shaikh", "dr", ""]
@@ -376,5 +482,39 @@ final class CatalogStore: ObservableObject {
             .filter { !stop.contains($0) }
             .joined()
             .filter { $0.isLetter }
+    }
+
+    /// Clé de personne : ignore les qualificatifs de version (Taraweeh,
+    /// Warsh, traductions…) et les petites différences de translittération.
+    /// Les noms contenant « with » restent volontairement distincts : ils
+    /// désignent une récitation avec traduction, pas un nouveau réciteur.
+    private static func latinIdentity(_ s: String) -> String {
+        var value = s.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+        value = value.replacingOccurrences(
+            of: #"\s*(\[[^]]+\]|\([^)]*\))"#,
+            with: "",
+            options: .regularExpression
+        )
+        value = value.replacingOccurrences(of: "dr.", with: "")
+        value = value.replacingOccurrences(of: "shaik ", with: "")
+        value = value.replacingOccurrences(of: "sheikh ", with: "")
+        value = value.replacingOccurrences(of: "abu ", with: "")
+        value = value.replacingOccurrences(of: "abd ", with: "")
+        value = value.replacingOccurrences(of: "al-", with: "")
+        value = value.replacingOccurrences(of: "el-", with: "")
+        value = value.replacingOccurrences(of: "al ", with: "")
+        value = value.replacingOccurrences(of: "el ", with: "")
+        value = value.replacingOccurrences(of: "ou", with: "u")
+        value = value.replacingOccurrences(of: "oo", with: "u")
+        value = value.replacingOccurrences(of: "ee", with: "i")
+        value = value.replacingOccurrences(of: "ei", with: "i")
+        value = value.replacingOccurrences(of: "aa", with: "a")
+        value = value.replacingOccurrences(of: "th", with: "t")
+        value = value.replacingOccurrences(of: "dh", with: "d")
+        value = value.replacingOccurrences(of: "kh", with: "h")
+        value = value.replacingOccurrences(of: "gh", with: "g")
+        return value
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .joined()
     }
 }

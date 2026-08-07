@@ -29,10 +29,50 @@ struct Recitation: Codable, Identifiable, Hashable {
     let provider: String
     let label: String
     let labelAr: String
+    /// Nom fourni par la source pour cette version. Il peut différer du nom
+    /// principal du récitateur, tout en désignant la même personne.
+    let sourceName: String
     /// Gabarit d'URL. `{sss}` → numéro sur 3 chiffres, `{s}` → numéro brut.
     let urlTemplate: String
     /// Sourates réellement disponibles dans cette version.
     let surahList: [Int]
+
+    init(id: String, provider: String, label: String, labelAr: String,
+         sourceName: String = "", urlTemplate: String, surahList: [Int]) {
+        self.id = id
+        self.provider = provider
+        self.label = label
+        self.labelAr = labelAr
+        self.sourceName = sourceName
+        self.urlTemplate = urlTemplate
+        self.surahList = surahList
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, provider, label, labelAr, sourceName, urlTemplate, surahList
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        provider = try values.decode(String.self, forKey: .provider)
+        label = try values.decode(String.self, forKey: .label)
+        labelAr = try values.decode(String.self, forKey: .labelAr)
+        sourceName = try values.decodeIfPresent(String.self, forKey: .sourceName) ?? ""
+        urlTemplate = try values.decode(String.self, forKey: .urlTemplate)
+        surahList = try values.decode([Int].self, forKey: .surahList)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(id, forKey: .id)
+        try values.encode(provider, forKey: .provider)
+        try values.encode(label, forKey: .label)
+        try values.encode(labelAr, forKey: .labelAr)
+        if !sourceName.isEmpty { try values.encode(sourceName, forKey: .sourceName) }
+        try values.encode(urlTemplate, forKey: .urlTemplate)
+        try values.encode(surahList, forKey: .surahList)
+    }
 
     func url(for surah: Int) -> URL? {
         let raw = urlTemplate
@@ -73,8 +113,48 @@ struct Reciter: Codable, Identifiable, Hashable {
     var nameAr: String
     var letter: String
     var versions: [Recitation]
+    /// Toutes les orthographes rencontrées pour cette même personne.
+    /// La première est généralement le nom affiché dans la liste.
+    var nameVariants: [String]
     /// Présent uniquement pour les récitateurs ajoutés par l'utilisateur.
     var isCustom: Bool?
+
+    init(id: String, name: String, nameAr: String, letter: String,
+         versions: [Recitation], nameVariants: [String] = [], isCustom: Bool? = nil) {
+        self.id = id
+        self.name = name
+        self.nameAr = nameAr
+        self.letter = letter
+        self.versions = versions
+        self.nameVariants = nameVariants
+        self.isCustom = isCustom
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, nameAr, letter, versions, nameVariants, isCustom
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        name = try values.decode(String.self, forKey: .name)
+        nameAr = try values.decode(String.self, forKey: .nameAr)
+        letter = try values.decode(String.self, forKey: .letter)
+        versions = try values.decode([Recitation].self, forKey: .versions)
+        nameVariants = try values.decodeIfPresent([String].self, forKey: .nameVariants) ?? []
+        isCustom = try values.decodeIfPresent(Bool.self, forKey: .isCustom)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(id, forKey: .id)
+        try values.encode(name, forKey: .name)
+        try values.encode(nameAr, forKey: .nameAr)
+        try values.encode(letter, forKey: .letter)
+        try values.encode(versions, forKey: .versions)
+        if !nameVariants.isEmpty { try values.encode(nameVariants, forKey: .nameVariants) }
+        try values.encodeIfPresent(isCustom, forKey: .isCustom)
+    }
 
     var custom: Bool { isCustom == true }
 
@@ -90,6 +170,7 @@ struct Reciter: Codable, Identifiable, Hashable {
 
     var completeVersions: [Recitation] { versions.filter(\.isComplete) }
     var hasArabicName: Bool { !nameAr.isEmpty }
+    var hasNameVariants: Bool { nameVariants.count > 1 }
 
     /// Version retenue par l'ajout en un appui : un mushaf complet si le
     /// récitateur en propose un, sinon la version la plus fournie.

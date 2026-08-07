@@ -168,6 +168,14 @@ struct ReciterDetailView: View {
                         .font(Theme.arabic(17))
                         .foregroundStyle(Theme.gold.opacity(0.85))
                 }
+
+                if reciter.hasNameVariants {
+                    Text("Aussi écrit : \(reciter.nameVariants.filter { $0 != reciter.name }.joined(separator: " · "))")
+                        .font(Theme.ui(10.5, .regular))
+                        .foregroundStyle(Theme.faint)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 12)
+                }
             }
 
             HStack(spacing: 6) {
@@ -202,6 +210,11 @@ struct ReciterDetailView: View {
                                 Text(v.shortLabel)
                                     .font(Theme.ui(12.5, .semibold))
                                     .lineLimit(1)
+                                if !v.sourceName.isEmpty && v.sourceName != reciter.name {
+                                    Text(v.sourceName)
+                                        .font(Theme.ui(9.5, .regular))
+                                        .lineLimit(1)
+                                }
                                 HStack(spacing: 4) {
                                     Text("\(v.surahList.count) sourates")
                                         .font(Theme.mono(9.5, .medium))

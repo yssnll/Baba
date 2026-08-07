@@ -23,7 +23,9 @@ struct RecitersView: View {
         guard !trimmed.isEmpty else { return filtered }
         let needle = Self.fold(trimmed)
         return filtered.filter {
-            Self.fold($0.name).contains(needle) || $0.nameAr.contains(trimmed)
+            Self.fold($0.name).contains(needle)
+                || $0.nameVariants.contains { Self.fold($0).contains(needle) }
+                || $0.nameAr.contains(trimmed)
         }
     }
 
@@ -239,6 +241,9 @@ struct ReciterRow: View {
                     }
 
                     HStack(spacing: 5) {
+                        if reciter.hasNameVariants {
+                            Chip(text: "\(reciter.nameVariants.count) orthographes", icon: "textformat")
+                        }
                         if reciter.custom {
                             Chip(text: "Ma source", icon: "link", tint: Theme.gold)
                         }
