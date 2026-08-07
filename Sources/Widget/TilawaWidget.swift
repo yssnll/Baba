@@ -122,7 +122,7 @@ struct TilawaWidget: Widget {
         }
         .configurationDisplayName("Tilawa")
         .description("Reprends ou contrôle ta récitation depuis l'écran d'accueil.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 

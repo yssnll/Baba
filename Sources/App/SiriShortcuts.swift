@@ -58,7 +58,7 @@ struct TilawaSurahEntity: AppEntity, Identifiable {
     }
 }
 
-struct TilawaSurahQuery: EntityQuery {
+struct TilawaSurahQuery: EntityQuery, EntityStringQuery {
     func entities(for identifiers: [TilawaSurahEntity.ID]) async -> [TilawaSurahEntity] {
         await CatalogStore.shared.waitUntilReady()
         let wanted = Set(identifiers.compactMap(Int.init))
@@ -72,6 +72,20 @@ struct TilawaSurahQuery: EntityQuery {
         return CatalogStore.shared.surahs.map {
             TilawaSurahEntity(id: String($0.number), number: $0.number, name: $0.nameTranslit)
         }
+    }
+
+    func entities(matching string: String) async throws -> [TilawaSurahEntity] {
+        await CatalogStore.shared.waitUntilReady()
+        guard let surah = CatalogStore.shared.surah(matching: string) else {
+            return []
+        }
+        return [
+            TilawaSurahEntity(
+                id: String(surah.number),
+                number: surah.number,
+                name: surah.nameTranslit
+            )
+        ]
     }
 }
 
@@ -91,7 +105,7 @@ struct TilawaReciterEntity: AppEntity, Identifiable {
     }
 }
 
-struct TilawaReciterQuery: EntityQuery {
+struct TilawaReciterQuery: EntityQuery, EntityStringQuery {
     func entities(for identifiers: [TilawaReciterEntity.ID]) async -> [TilawaReciterEntity] {
         await CatalogStore.shared.waitUntilReady()
         let wanted = Set(identifiers)
@@ -105,6 +119,19 @@ struct TilawaReciterQuery: EntityQuery {
         return CatalogStore.shared.allReciters.map {
             TilawaReciterEntity(id: $0.id, name: $0.name, nameAr: $0.nameAr)
         }
+    }
+
+    /// Permet à Siri de résoudre une transcription approximative comme
+    /// « Muaqly » vers « Maher al-Muaiqly » sans demander une sélection
+    /// manuelle dans la liste complète.
+    func entities(matching string: String) async throws -> [TilawaReciterEntity] {
+        await CatalogStore.shared.waitUntilReady()
+        guard let reciter = CatalogStore.shared.reciter(matching: string) else {
+            return []
+        }
+        return [
+            TilawaReciterEntity(id: reciter.id, name: reciter.name, nameAr: reciter.nameAr)
+        ]
     }
 }
 
@@ -145,7 +172,9 @@ struct TilawaShortcuts: AppShortcutsProvider {
             intent: PlayTilawaSurahIntent(),
             phrases: [
                 "Lis \(\.$surah) avec \(\.$reciter) dans \(.applicationName)",
+                "Lis la sourate \(\.$surah) avec \(\.$reciter)",
                 "Mets \(\.$surah) avec \(\.$reciter) dans \(.applicationName)",
+                "Mets la sourate \(\.$surah) avec \(\.$reciter)",
                 "Joue \(\.$surah) avec \(\.$reciter) dans \(.applicationName)"
             ],
             shortTitle: "Lire une sourate",
@@ -155,7 +184,9 @@ struct TilawaShortcuts: AppShortcutsProvider {
             intent: PlayTilawaReciterIntent(),
             phrases: [
                 "Lis avec \(\.$reciter) dans \(.applicationName)",
+                "Lis avec \(\.$reciter)",
                 "Mets \(\.$reciter) dans \(.applicationName)",
+                "Mets \(\.$reciter)",
                 "Joue avec \(\.$reciter) dans \(.applicationName)"
             ],
             shortTitle: "Lire avec un récitateur",

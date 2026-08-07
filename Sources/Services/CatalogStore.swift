@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 /// Catalogue des récitateurs et des sourates.
 ///
@@ -58,6 +59,27 @@ final class CatalogStore: ObservableObject {
 
     func surah(_ number: Int) -> Surah? { surahs.first { $0.number == number } }
 
+    /// Recherche d'une sourate à partir d'une formulation vocale.
+    /// Siri peut transmettre « la sourate Fatiha » plutôt que le seul nom.
+    func surah(matching query: String) -> Surah? {
+        let needle = Self.foldForSearch(query)
+            .replacingOccurrences(of: "sourate", with: "")
+            .replacingOccurrences(of: "la", with: "")
+        guard !needle.isEmpty else { return nil }
+
+        return surahs.first { surah in
+            let candidates = [
+                surah.nameTranslit,
+                surah.nameFr,
+                surah.nameAr
+            ]
+            return candidates.contains {
+                let candidate = Self.foldForSearch($0)
+                return candidate.contains(needle) || needle.contains(candidate)
+            }
+        }
+    }
+
     func reciter(id: String) -> Reciter? { allReciters.first { $0.id == id } }
 
     /// Attend que le catalogue embarqué ou mis en cache soit disponible.
@@ -76,9 +98,38 @@ final class CatalogStore: ObservableObject {
         let needle = Self.foldForSearch(query)
         guard !needle.isEmpty else { return nil }
 
-        return allReciters.first { reciter in
+        let exact = allReciters.first { reciter in
             let candidates = [reciter.name, reciter.nameAr] + reciter.nameVariants
             return candidates.contains { Self.foldForSearch($0).contains(needle) }
+        }
+        if let exact { return exact }
+
+        // Siri peut transcrire « Muaiqly » comme « Muaqly », « Muqly » ou
+        // « Mu'aïqly ». On compare aussi les mots significatifs après une
+        // petite normalisation des translittérations courantes.
+        let normalizedNeedle = Self.normalizeVoiceName(needle)
+        return allReciters.first { reciter in
+            let candidates = [reciter.name, reciter.nameAr] + reciter.nameVariants
+            return candidates.contains { candidate in
+                let folded = Self.foldForSearch(candidate)
+                let normalized = Self.normalizeVoiceName(folded)
+                if normalized.contains(normalizedNeedle)
+                    || normalizedNeedle.contains(normalized) {
+                    return true
+                }
+
+                // Siri peut conserver le prénom et le nom séparément
+                // (« Yasser Dossari ») alors que le catalogue contient un
+                // qualificatif au milieu (« Yasser Al-Dosari »).
+                let queryTokens = Self.voiceTokens(query)
+                let candidateTokens = Set(Self.voiceTokens(candidate))
+                return queryTokens.count > 1
+                    && queryTokens.allSatisfy { token in
+                        candidateTokens.contains { candidateToken in
+                            candidateToken.contains(token) || token.contains(candidateToken)
+                        }
+                    }
+            }
         }
     }
 
@@ -115,6 +166,32 @@ final class CatalogStore: ObservableObject {
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .joined()
+    }
+
+    private static func normalizeVoiceName(_ value: String) -> String {
+        var normalized = value
+        let aliases = [
+            "muaqly": "muaiqly",
+            "muaqli": "muaiqly",
+            "muqly": "muaiqly",
+            "muayqly": "muaiqly",
+            "mauqly": "muaiqly",
+            "muaiqly": "muaiqly",
+            "dossary": "dossari",
+            "dossari": "dossari",
+            "dosari": "dossari",
+        ]
+        for (alias, canonical) in aliases {
+            normalized = normalized.replacingOccurrences(of: alias, with: canonical)
+        }
+        return normalized
+    }
+
+    private static func voiceTokens(_ value: String) -> [String] {
+        value
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .map { normalizeVoiceName(foldForSearch($0)) }
+            .filter { $0.count >= 2 }
     }
 
     // MARK: - Chargement local

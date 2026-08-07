@@ -11,8 +11,8 @@ Interface SwiftUI : verre translucide animé, géométrie islamique vectorielle,
 
 La version actuelle propose aussi :
 
-- des commandes Siri pour dire « Lis la Fatiha avec Yasser Al-Dossari dans Tilawa » ou « Mets Muaqly dans Tilawa » ;
-- un widget d'écran d'accueil pour reprendre, mettre en pause et passer à la sourate suivante ;
+- des commandes Siri pour dire « Siri, mets la sourate Fatiha avec Yasser Dossari » ou « Siri, mets Muaqly » ;
+- un widget d'écran d'accueil en petite, moyenne ou grande taille pour reprendre, mettre en pause et passer à la sourate suivante ;
 - une sélection Siri de la sourate et du récitateur à partir du catalogue embarqué.
 
 Pour les widgets, Siri et la lecture depuis l'écran verrouillé, l'application doit être signée avec un compte Apple configuré pour l'App Group `group.app.tilawa`.
@@ -23,7 +23,7 @@ Pour les widgets, Siri et la lecture depuis l'écran verrouillé, l'application 
 
 Trois choses honnêtes, pour t'éviter une mauvaise surprise.
 
-**1. Le code n'a pas été compilé.** Il a été écrit sous Linux, où aucun compilateur Swift n'est disponible. Ce qui **a** été vérifié :
+**1. La compilation doit être faite sur macOS avec Xcode.** Ce projet contient une app iOS native et un widget WidgetKit ; Linux ne peut pas produire l'IPA. Les imports requis pour `ObservableObject` et `@Published` sont inclus explicitement afin d'éviter l'erreur classique « cannot find type ObservableObject in scope ».
 
 | Vérification | Résultat |
 |---|---|
