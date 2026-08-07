@@ -7,3 +7,10 @@ uri = "file://attached_assets/tilawa-ipa-latest/Tilawa-unsigned.ipa"
 type = "unspecified"
 title = "Tilawa — IPA corrigée visible dès le défilement"
 description = "Nouvelle IPA compilée avec succès. La flèche de retour en haut est plus grande, placée en bas à droite et apparaît dès le début du défilement. IPA non signée."
+
+[[outputs]]
+id = "8VW-WFSuKP-kLxHAFRvxZ"
+uri = "file://attached_assets/tilawa-ipa-rebuilt/Tilawa-unsigned.ipa"
+type = "unspecified"
+title = "Tilawa — IPA avec bouton flèche reconstruit"
+description = "Version recompilée avec une flèche toujours visible en bas à droite. Elle remonte directement au début de la liste des récitateurs. IPA non signée."
