@@ -40,6 +40,36 @@ struct RootView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.canvas.ignoresSafeArea())
         .id(appearanceKey)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if tab != .book {
+                HStack {
+                    Spacer()
+                    Button {
+                        withAnimation(.spring(response: 0.34, dampingFraction: 0.76)) {
+                            tab = .book
+                        }
+                    } label: {
+                        Label("Livre", systemImage: "book.closed.fill")
+                            .font(Theme.ui(12, .semibold))
+                            .foregroundStyle(Theme.ivory)
+                            .padding(.horizontal, 13)
+                            .padding(.vertical, 9)
+                            .background(
+                                Capsule()
+                                    .fill(Theme.emerald.opacity(0.72))
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(Theme.gold.opacity(0.45), lineWidth: 0.8)
+                                    )
+                            )
+                    }
+                    .buttonStyle(PressScale(scale: 0.96))
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .padding(.bottom, 4)
+            }
+        }
         // En inset de safe area : les listes gagnent automatiquement la marge
         // nécessaire et rien ne se retrouve caché sous le mini-lecteur.
         .safeAreaInset(edge: .bottom, spacing: 0) {
