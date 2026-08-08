@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import UIKit
 
 @MainActor
 final class QuranBookStore: ObservableObject {
@@ -255,32 +256,63 @@ private struct TajweedText: View {
     let rawValue: String
 
     var body: some View {
-        buildText(from: rawValue)
-            .font(Theme.arabic(23, .regular))
-            .lineSpacing(12)
-            .multilineTextAlignment(.trailing)
+        QuranRichTextLabel(rawValue: rawValue)
             .frame(maxWidth: .infinity, alignment: .trailing)
     }
+}
 
-    private func buildText(from raw: String) -> Text {
+private struct QuranRichTextLabel: UIViewRepresentable {
+    let rawValue: String
+
+    func makeUIView(context: Context) -> QuranUILabel {
+        let label = QuranUILabel()
+        label.numberOfLines = 0
+        label.textAlignment = .right
+        label.lineBreakMode = .byWordWrapping
+        label.setContentHuggingPriority(.required, for: .vertical)
+        label.setContentCompressionResistancePriority(.required, for: .vertical)
+        label.attributedText = makeAttributedText(from: rawValue)
+        return label
+    }
+
+    func updateUIView(_ label: QuranUILabel, context: Context) {
+        label.attributedText = makeAttributedText(from: rawValue)
+    }
+
+    private func makeAttributedText(from raw: String) -> NSAttributedString {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .right
+        paragraph.lineSpacing = 12
+        paragraph.baseWritingDirection = .rightToLeft
+
+        let defaultAttributes: [NSAttributedString.Key: Any] = [
+            .font: QuranUILabel.quranFont,
+            .foregroundColor: UIColor(Theme.ivory),
+            .paragraphStyle: paragraph
+        ]
+        let result = NSMutableAttributedString(string: "", attributes: defaultAttributes)
+
         let pattern = #"<tajweed class=([^>]+)>(.*?)</tajweed>|<span class=end>(.*?)</span>"#
         guard let regex = try? NSRegularExpression(
             pattern: pattern,
             options: [.dotMatchesLineSeparators]
         ) else {
-            return Text(verbatim: raw).foregroundStyle(Theme.ivory)
+            return NSAttributedString(string: raw, attributes: defaultAttributes)
         }
 
         let nsRange = NSRange(raw.startIndex..<raw.endIndex, in: raw)
         let matches = regex.matches(in: raw, options: [], range: nsRange)
-        var result = Text("")
         var cursor = raw.startIndex
 
         for match in matches {
             guard let fullRange = Range(match.range(at: 0), in: raw) else { continue }
             if cursor < fullRange.lowerBound {
-                result = result + Text(verbatim: String(raw[cursor..<fullRange.lowerBound]))
-                    .foregroundStyle(Theme.ivory)
+                result.append(
+                    NSAttributedString(
+                        string: String(raw[cursor..<fullRange.lowerBound]),
+                        attributes: defaultAttributes
+                    )
+                )
             }
 
             let className = match.range(at: 1).location == NSNotFound
@@ -291,14 +323,19 @@ private struct TajweedText: View {
                 : match.range(at: 2)
             let content = Range(contentRange, in: raw).map { String(raw[$0]) } ?? ""
 
-            result = result + Text(verbatim: content)
-                .foregroundStyle(color(for: className))
+            var attributes = defaultAttributes
+            attributes[.foregroundColor] = UIColor(color(for: className))
+            result.append(NSAttributedString(string: content, attributes: attributes))
             cursor = fullRange.upperBound
         }
 
         if cursor < raw.endIndex {
-            result = result + Text(verbatim: String(raw[cursor...]))
-                .foregroundStyle(Theme.ivory)
+            result.append(
+                NSAttributedString(
+                    string: String(raw[cursor...]),
+                    attributes: defaultAttributes
+                )
+            )
         }
         return result
     }
@@ -326,6 +363,17 @@ private struct TajweedText: View {
         default:
             return Theme.ivory
         }
+    }
+}
+
+private final class QuranUILabel: UILabel {
+    static let quranFont = UIFont(name: "GeezaPro", size: 23)
+        ?? UIFont.systemFont(ofSize: 23, weight: .regular)
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard bounds.width > 0, preferredMaxLayoutWidth != bounds.width else { return }
+        preferredMaxLayoutWidth = bounds.width
     }
 }
 
