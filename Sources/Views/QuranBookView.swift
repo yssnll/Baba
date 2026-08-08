@@ -455,23 +455,140 @@ private struct QuranContinuousText: View {
         return result
     }
 
-    private var continuousRawText: String {
-        displayVerses
-            .map { item in
-                rawText(
-                    for: item.verse,
+    var body: some View {
+        QuranVerseFlowLayout(spacing: 5, lineSpacing: colors.isLight ? 7 : 9) {
+            ForEach(displayVerses) { item in
+                QuranVerseText(
+                    verse: item.verse,
                     displayedNumber: item.displayedNumber == item.verse.verseNumber
                         ? nil
-                        : item.displayedNumber
+                        : item.displayedNumber,
+                    colors: colors
                 )
             }
-            .joined(separator: " ")
+        }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 16)
+            .background(colors.controlBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(colors.border, lineWidth: 0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .environment(\.layoutDirection, .rightToLeft)
+    }
+}
+
+/// Dispose les versets dans un flux de droite à gauche. Chaque verset reste
+/// un label indépendant (donc son arabe ne peut pas être réordonné par les
+/// versets voisins), mais les labels se suivent sur la même ligne tant que
+/// l'espace disponible le permet.
+private struct QuranVerseFlowLayout: Layout {
+    var spacing: CGFloat
+    var lineSpacing: CGFloat
+
+    private struct Line {
+        var items: [(index: Int, size: CGSize)]
+        var width: CGFloat
+        var height: CGFloat
     }
 
-    private func rawText(
-        for verse: QuranBookVerse,
-        displayedNumber: Int?
-    ) -> String {
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        let sizes = measuredSizes(for: subviews, width: proposal.width)
+        let width = proposal.width ?? sizes.reduce(0) {
+            max($0, $1.width)
+        }
+        let lines = makeLines(sizes: sizes, availableWidth: max(width, 1))
+        return CGSize(
+            width: width,
+            height: lines.reduce(0) { $0 + $1.height }
+                + lineSpacing * CGFloat(max(0, lines.count - 1))
+        )
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        let sizes = measuredSizes(for: subviews, width: bounds.width)
+        let lines = makeLines(sizes: sizes, availableWidth: bounds.width)
+        var y = bounds.minY
+
+        for line in lines {
+            var x = bounds.maxX
+            for item in line.items {
+                x -= item.size.width
+                subviews[item.index].place(
+                    at: CGPoint(x: x, y: y),
+                    anchor: .topLeading,
+                    proposal: ProposedViewSize(item.size)
+                )
+                x -= spacing
+            }
+            y += line.height + lineSpacing
+        }
+    }
+
+    private func measuredSizes(
+        for subviews: Subviews,
+        width: CGFloat?
+    ) -> [CGSize] {
+        subviews.map { subview in
+            let ideal = subview.sizeThatFits(.unspecified)
+            guard let width, width > 0, ideal.width > width else {
+                return ideal
+            }
+            return subview.sizeThatFits(
+                ProposedViewSize(width: width, height: nil)
+            )
+        }
+    }
+
+    private func makeLines(
+        sizes: [CGSize],
+        availableWidth: CGFloat
+    ) -> [Line] {
+        var lines: [Line] = []
+        var current = Line(items: [], width: 0, height: 0)
+
+        for (index, size) in sizes.enumerated() {
+            let proposedWidth = current.items.isEmpty
+                ? size.width
+                : current.width + spacing + size.width
+
+            if !current.items.isEmpty, proposedWidth > availableWidth {
+                lines.append(current)
+                current = Line(items: [], width: 0, height: 0)
+            }
+
+            let nextWidth = current.items.isEmpty
+                ? size.width
+                : current.width + spacing + size.width
+            current.items.append((index: index, size: size))
+            current.width = nextWidth
+            current.height = max(current.height, size.height)
+        }
+
+        if !current.items.isEmpty {
+            lines.append(current)
+        }
+        return lines
+    }
+}
+
+private struct QuranVerseText: View {
+    let verse: QuranBookVerse
+    let displayedNumber: Int?
+    let colors: QuranBookColors
+
+    private var rawText: String {
         let text = verse.tajweedText ?? verse.plainText
         let number = displayedNumber ?? verse.verseNumber
         let arabicNumber = number
@@ -507,17 +624,7 @@ private struct QuranContinuousText: View {
     }
 
     var body: some View {
-        QuranRichTextLabel(rawValue: continuousRawText, colors: colors)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 16)
-            .background(colors.controlBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(colors.border, lineWidth: 0.8)
-            }
-            .frame(maxWidth: .infinity)
-            .environment(\.layoutDirection, .rightToLeft)
+        QuranRichTextLabel(rawValue: rawText, colors: colors)
     }
 }
 
@@ -529,6 +636,7 @@ private struct QuranRichTextLabel: UIViewRepresentable {
         let label = QuranUILabel()
         label.numberOfLines = 0
         label.textAlignment = .right
+        label.semanticContentAttribute = .forceRightToLeft
         label.lineBreakMode = .byWordWrapping
         label.setContentHuggingPriority(.defaultLow, for: .horizontal)
         label.setContentCompressionResistancePriority(.required, for: .horizontal)
