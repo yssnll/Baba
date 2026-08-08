@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+import MediaPlayer
 
 struct TilawaWidgetEntry: TimelineEntry {
     let date: Date
@@ -37,17 +38,28 @@ struct TilawaWidgetProvider: TimelineProvider {
 
     private func currentEntry() -> TilawaWidgetEntry {
         let defaults = UserDefaults(suiteName: TilawaSharedState.appGroup)
-        let title = defaults?.string(forKey: TilawaSharedState.widgetTitle)
-        let subtitle = defaults?.string(forKey: TilawaSharedState.widgetSubtitle)
+        let nowPlaying = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        let sharedTitle = defaults?.string(forKey: TilawaSharedState.widgetTitle)
+        let sharedSubtitle = defaults?.string(forKey: TilawaSharedState.widgetSubtitle)
+        let nowPlayingTitle = nowPlaying?[MPMediaItemPropertyTitle] as? String
+        let nowPlayingArtist = nowPlaying?[MPMediaItemPropertyArtist] as? String
+        let title = sharedTitle ?? nowPlayingTitle
+        let subtitle = sharedSubtitle ?? nowPlayingArtist
         let updatedAt = defaults?.double(forKey: TilawaSharedState.widgetUpdatedAt) ?? 0
+        let sharedIsPlaying = defaults?.object(forKey: TilawaSharedState.widgetIsPlaying) as? Bool
+        let playbackRate = nowPlaying?[MPNowPlayingInfoPropertyPlaybackRate] as? NSNumber
+        let elapsed = nowPlaying?[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? NSNumber
+        let playbackDuration = nowPlaying?[MPMediaItemPropertyPlaybackDuration] as? NSNumber
         return TilawaWidgetEntry(
             date: updatedAt > 0 ? Date(timeIntervalSince1970: updatedAt) : Date(),
             title: title ?? "Reprendre la lecture",
             subtitle: subtitle ?? "Ouvre Tilawa pour commencer",
-            isPlaying: defaults?.bool(forKey: TilawaSharedState.widgetIsPlaying) ?? false,
+            isPlaying: sharedIsPlaying ?? ((playbackRate?.doubleValue ?? 0) > 0),
             hasTrack: title != nil,
-            position: defaults?.double(forKey: TilawaSharedState.widgetPosition) ?? 0,
-            duration: defaults?.double(forKey: TilawaSharedState.widgetDuration) ?? 0,
+            position: defaults?.object(forKey: TilawaSharedState.widgetPosition) as? Double
+                ?? elapsed?.doubleValue ?? 0,
+            duration: defaults?.object(forKey: TilawaSharedState.widgetDuration) as? Double
+                ?? playbackDuration?.doubleValue ?? 0,
             palette: TilawaWidgetPalette(defaults: defaults)
         )
     }
