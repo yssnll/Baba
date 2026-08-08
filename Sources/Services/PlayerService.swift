@@ -64,6 +64,8 @@ final class PlayerService: NSObject, ObservableObject {
     private let resumeKey = "tilawa.playback.resume"
     private var lastPersistedPosition = -1.0
     private var lastWidgetSnapshotAt = Date.distantPast
+    private var widgetCommandTimer: Timer?
+    private var lastHandledWidgetCommandID: String?
 
     var hasQueue: Bool { !queue.isEmpty }
     var currentIndex: Int? { current.flatMap { c in queue.firstIndex(where: { $0.id == c.id }) } }
@@ -82,6 +84,11 @@ final class PlayerService: NSObject, ObservableObject {
         // Publier immédiatement l'état restauré évite une timeline vide après
         // un redémarrage de l'app ou une installation de l'extension.
         updateWidgetSnapshot()
+        startWidgetCommandMonitor()
+    }
+
+    deinit {
+        widgetCommandTimer?.invalidate()
     }
 
     // MARK: - Session audio
@@ -216,7 +223,13 @@ final class PlayerService: NSObject, ObservableObject {
         refreshNowPlaying()
     }
 
-    func togglePlayPause() { isPlaying ? pause() : play() }
+    func togglePlayPause() {
+        if current == nil, pendingResume != nil {
+            resumeSavedTrack()
+        } else {
+            isPlaying ? pause() : play()
+        }
+    }
 
     /// Relance la piste courante après une erreur réseau ou un fichier local
     /// devenu illisible. L'écran de lecture peut ainsi proposer une action
@@ -328,7 +341,7 @@ final class PlayerService: NSObject, ObservableObject {
                 self.persistCurrentPosition()
             }
             if !self.isScrubbing,
-               Date().timeIntervalSince(self.lastWidgetSnapshotAt) >= 15 {
+               Date().timeIntervalSince(self.lastWidgetSnapshotAt) >= 5 {
                 self.updateWidgetSnapshot()
             }
             if let d = self.player?.currentItem?.duration, d.isNumeric, d.seconds > 0 {
@@ -431,6 +444,46 @@ final class PlayerService: NSObject, ObservableObject {
         if let art = artwork(for: t) { info[MPMediaItemPropertyArtwork] = art }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
         updateWidgetSnapshot()
+    }
+
+    // MARK: - Commandes du widget
+
+    /// Le widget est un processus séparé. Quand l'app audio est en arrière-plan,
+    /// elle reste active et consomme cette commande très courte dans l'App Group.
+    /// Aucun lien n'est donc nécessaire pour mettre en pause ou changer de piste.
+    private func startWidgetCommandMonitor() {
+        widgetCommandTimer = Timer.scheduledTimer(
+            withTimeInterval: 0.25,
+            repeats: true
+        ) { [weak self] _ in
+            self?.processWidgetCommand()
+        }
+    }
+
+    private func processWidgetCommand() {
+        guard let defaults = UserDefaults(suiteName: TilawaSharedState.appGroup),
+              let data = defaults.data(forKey: TilawaSharedState.widgetCommand),
+              let command = try? JSONDecoder().decode(
+                TilawaWidgetCommand.self, from: data
+              ),
+              command.id != lastHandledWidgetCommandID
+        else { return }
+
+        lastHandledWidgetCommandID = command.id
+        defaults.removeObject(forKey: TilawaSharedState.widgetCommand)
+        defaults.synchronize()
+        // Une commande restée dans l'App Group après une longue interruption
+        // ne doit pas déclencher une action inattendue au prochain lancement.
+        guard Date().timeIntervalSince1970 - command.createdAt < 60 else { return }
+
+        switch command.action {
+        case .toggle:
+            togglePlayPause()
+        case .next:
+            next()
+        case .previous:
+            previous()
+        }
     }
 
     /// Republie l'état actuel après le retour de l'application au premier plan.

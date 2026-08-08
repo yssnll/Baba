@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+import AppIntents
 
 struct TilawaWidgetEntry: TimelineEntry {
     let date: Date
@@ -9,6 +10,7 @@ struct TilawaWidgetEntry: TimelineEntry {
     let hasTrack: Bool
     let position: Double
     let duration: Double
+    let updatedAt: TimeInterval
     let palette: TilawaWidgetPalette
 }
 
@@ -18,6 +20,7 @@ struct TilawaWidgetProvider: TimelineProvider {
             date: Date(), title: "Reprendre la lecture",
             subtitle: "Tilawa", isPlaying: true, hasTrack: true,
             position: 42, duration: 240,
+            updatedAt: Date().timeIntervalSince1970,
             palette: .fallback
         )
     }
@@ -35,7 +38,7 @@ struct TilawaWidgetProvider: TimelineProvider {
         completion(
             Timeline(
                 entries: [entry],
-                policy: .after(Date().addingTimeInterval(60))
+                policy: .after(Date().addingTimeInterval(15))
             )
         )
     }
@@ -54,6 +57,7 @@ struct TilawaWidgetProvider: TimelineProvider {
             hasTrack: snapshot?.hasTrack ?? false,
             position: snapshot?.position ?? 0,
             duration: snapshot?.duration ?? 0,
+            updatedAt: snapshot?.updatedAt ?? Date().timeIntervalSince1970,
             palette: TilawaWidgetPalette(defaults: defaults)
         )
     }
@@ -63,25 +67,23 @@ struct TilawaWidgetView: View {
     let entry: TilawaWidgetEntry
     @Environment(\.widgetFamily) private var family
 
-    private var toggleURL: URL {
-        URL(string: entry.hasTrack ? "tilawa://toggle" : "tilawa://resume")!
-    }
-
     var body: some View {
-        ZStack {
-            background
-            switch family {
-            case .systemSmall:
-                smallLayout
-            case .systemMedium:
-                mediumLayout
-            default:
-                largeLayout
+        TimelineView(.periodic(from: Date(), by: 1)) { context in
+            ZStack {
+                background
+                switch family {
+                case .systemSmall:
+                    smallLayout(at: context.date)
+                case .systemMedium:
+                    mediumLayout(at: context.date)
+                default:
+                    largeLayout(at: context.date)
+                }
             }
-        }
-        .widgetURL(URL(string: "tilawa://resume")!)
-        .containerBackground(for: .widget) {
-            entry.palette.background
+            .widgetURL(URL(string: "tilawa://resume")!)
+            .containerBackground(for: .widget) {
+                entry.palette.background
+            }
         }
     }
 
@@ -136,10 +138,16 @@ struct TilawaWidgetView: View {
         }
     }
 
-    private var progress: some View {
+    private func displayedPosition(at date: Date) -> Double {
+        guard entry.isPlaying else { return entry.position }
+        let elapsed = max(0, date.timeIntervalSince1970 - entry.updatedAt)
+        return min(entry.position + elapsed, entry.duration > 0 ? entry.duration : .greatestFiniteMagnitude)
+    }
+
+    private func progress(at date: Date) -> some View {
         GeometryReader { proxy in
             let fraction = entry.duration > 0
-                ? min(max(entry.position / entry.duration, 0), 1)
+                ? min(max(displayedPosition(at: date) / entry.duration, 0), 1)
                 : 0
             ZStack(alignment: .leading) {
                 Capsule().fill(entry.palette.text.opacity(0.14))
@@ -154,23 +162,34 @@ struct TilawaWidgetView: View {
         .frame(height: 4)
     }
 
+    private var playButtonLabel: some View {
+        Image(systemName: entry.isPlaying ? "pause.fill" : "play.fill")
+            .font(.system(size: 14, weight: .bold))
+            .foregroundStyle(entry.palette.background)
+            .frame(width: 34, height: 34)
+            .background(Circle().fill(entry.palette.gold))
+            .shadow(color: entry.palette.gold.opacity(0.25), radius: 7)
+    }
+
+    @ViewBuilder
     private var playButton: some View {
-        Link(destination: toggleURL) {
-            Image(systemName: entry.isPlaying ? "pause.fill" : "play.fill")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(entry.palette.background)
-                .frame(width: 34, height: 34)
-                .background(Circle().fill(entry.palette.gold))
-                .shadow(color: entry.palette.gold.opacity(0.25), radius: 7)
+        if entry.hasTrack {
+            Button(intent: TilawaTogglePlaybackIntent()) {
+                playButtonLabel
+            }
+        } else {
+            Button(intent: TilawaResumePlaybackIntent()) {
+                playButtonLabel
+            }
         }
     }
 
-    private var smallLayout: some View {
+    private func smallLayout(at date: Date) -> some View {
         VStack(alignment: .leading, spacing: 9) {
             brand
             Spacer(minLength: 2)
             trackTitle
-            progress
+            progress(at: date)
             HStack {
                 Text(entry.isPlaying ? "Lecture en cours" : "En pause")
                     .font(.system(size: 10, weight: .semibold, design: .rounded))
@@ -182,13 +201,13 @@ struct TilawaWidgetView: View {
         .padding(14)
     }
 
-    private var mediumLayout: some View {
+    private func mediumLayout(at date: Date) -> some View {
         HStack(spacing: 15) {
             VStack(alignment: .leading, spacing: 10) {
                 brand
                 Spacer(minLength: 0)
                 trackTitle
-                progress
+                progress(at: date)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -196,13 +215,23 @@ struct TilawaWidgetView: View {
                 Image(systemName: entry.isPlaying ? "waveform" : "headphones")
                     .font(.system(size: 21, weight: .medium))
                     .foregroundStyle(entry.palette.gold)
-                playButton
+                HStack(spacing: 8) {
+                    Button(intent: TilawaPreviousTrackIntent()) {
+                        Image(systemName: "backward.end.fill")
+                    }
+                    playButton
+                    Button(intent: TilawaNextTrackIntent()) {
+                        Image(systemName: "forward.end.fill")
+                    }
+                }
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(entry.palette.text.opacity(0.85))
             }
         }
         .padding(16)
     }
 
-    private var largeLayout: some View {
+    private func largeLayout(at date: Date) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             brand
             HStack(alignment: .center, spacing: 13) {
@@ -216,13 +245,13 @@ struct TilawaWidgetView: View {
                 }
                 trackTitle
             }
-            progress
+            progress(at: date)
             HStack(spacing: 18) {
-                Link(destination: URL(string: "tilawa://previous")!) {
+                Button(intent: TilawaPreviousTrackIntent()) {
                     Image(systemName: "backward.end.fill")
                 }
                 playButton
-                Link(destination: URL(string: "tilawa://next")!) {
+                Button(intent: TilawaNextTrackIntent()) {
                     Image(systemName: "forward.end.fill")
                 }
                 Spacer()
@@ -234,6 +263,46 @@ struct TilawaWidgetView: View {
             .foregroundStyle(entry.palette.text.opacity(0.85))
         }
         .padding(18)
+    }
+}
+
+struct TilawaTogglePlaybackIntent: AppIntent {
+    static let title: LocalizedStringResource = "Lire ou mettre en pause"
+    static let openAppWhenRun = false
+
+    func perform() async throws -> some IntentResult {
+        TilawaWidgetCommandStore.send(.toggle)
+        return .result()
+    }
+}
+
+struct TilawaResumePlaybackIntent: AppIntent {
+    static let title: LocalizedStringResource = "Reprendre la lecture"
+    static let openAppWhenRun = false
+
+    func perform() async throws -> some IntentResult {
+        TilawaWidgetCommandStore.send(.toggle)
+        return .result()
+    }
+}
+
+struct TilawaPreviousTrackIntent: AppIntent {
+    static let title: LocalizedStringResource = "Sourate précédente"
+    static let openAppWhenRun = false
+
+    func perform() async throws -> some IntentResult {
+        TilawaWidgetCommandStore.send(.previous)
+        return .result()
+    }
+}
+
+struct TilawaNextTrackIntent: AppIntent {
+    static let title: LocalizedStringResource = "Sourate suivante"
+    static let openAppWhenRun = false
+
+    func perform() async throws -> some IntentResult {
+        TilawaWidgetCommandStore.send(.next)
+        return .result()
     }
 }
 
