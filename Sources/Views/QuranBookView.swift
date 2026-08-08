@@ -225,8 +225,23 @@ struct QuranBookView: View {
     }
 
     private func loadCurrentSelection() {
-        guard catalog.surah(selectedSurahNumber) != nil else { return }
-        book.load(surahNumber: selectedSurahNumber)
+        guard !catalog.surahs.isEmpty else { return }
+
+        // Une ancienne valeur enregistrée ne doit jamais empêcher le Livre de
+        // démarrer. Cela arrivait après une mise à jour lorsque le numéro
+        // mémorisé ne correspondait plus au catalogue chargé.
+        guard let surah = catalog.surah(selectedSurahNumber)
+                ?? catalog.surahs.first else { return }
+
+        if selectedSurahNumber != surah.number {
+            selectedSurahNumber = surah.number
+        }
+
+        // Évite de relancer une requête quand SwiftUI réévalue la vue sans
+        // changement de sourate.
+        guard book.loadedSurahNumber != surah.number || book.errorMessage != nil
+        else { return }
+        book.load(surahNumber: surah.number)
     }
 }
 
@@ -234,10 +249,17 @@ private struct QuranContinuousText: View {
     let verses: [QuranBookVerse]
 
     var body: some View {
-        TajweedText(rawValue: verses.map { verse in
-            let text = verse.tajweedText ?? verse.plainText
-            return "\(text) <span class=end> ۝\(verse.verseNumber) </span>"
-        }.joined(separator: " "))
+        VStack(alignment: .trailing, spacing: 0) {
+            TajweedText(rawValue: verses.map { verse in
+                let text = verse.tajweedText ?? verse.plainText
+                // Quran.com inclut déjà le marqueur du verset dans le texte
+                // tajwid. On ne l'ajoute que pour les réponses de secours.
+                return text.contains("<span class=end>")
+                    ? text
+                    : "\(text) <span class=end> ۝\(verse.verseNumber) </span>"
+            }.joined(separator: " "))
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
         .padding(.horizontal, 16)
         .padding(.vertical, 20)
         .background(Color.white.opacity(0.045))
@@ -246,8 +268,7 @@ private struct QuranContinuousText: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 0.7)
         }
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(.horizontal, 14)
+        .frame(maxWidth: .infinity)
         .environment(\.layoutDirection, .rightToLeft)
     }
 }
@@ -269,6 +290,8 @@ private struct QuranRichTextLabel: UIViewRepresentable {
         label.numberOfLines = 0
         label.textAlignment = .right
         label.lineBreakMode = .byWordWrapping
+        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        label.setContentCompressionResistancePriority(.required, for: .horizontal)
         label.setContentHuggingPriority(.required, for: .vertical)
         label.setContentCompressionResistancePriority(.required, for: .vertical)
         label.attributedText = makeAttributedText(from: rawValue)
@@ -277,6 +300,25 @@ private struct QuranRichTextLabel: UIViewRepresentable {
 
     func updateUIView(_ label: QuranUILabel, context: Context) {
         label.attributedText = makeAttributedText(from: rawValue)
+        label.invalidateIntrinsicContentSize()
+    }
+
+    func sizeThatFits(
+        _ proposal: ProposedViewSize,
+        uiView: QuranUILabel,
+        context: Context
+    ) -> CGSize? {
+        guard let width = proposal.width, width > 0 else { return nil }
+
+        // UILabel ne connaît pas sa largeur lorsqu'il est placé dans un
+        // ScrollView vertical. Sans cette mesure explicite, UIKit conserve
+        // parfois une hauteur correspondant à une seule ligne et le texte
+        // déborde horizontalement au lieu de s'enrouler.
+        uiView.preferredMaxLayoutWidth = width
+        let fittingSize = uiView.sizeThatFits(
+            CGSize(width: width, height: .greatestFiniteMagnitude)
+        )
+        return CGSize(width: width, height: ceil(fittingSize.height))
     }
 
     private func makeAttributedText(from raw: String) -> NSAttributedString {
@@ -374,6 +416,13 @@ private final class QuranUILabel: UILabel {
         super.layoutSubviews()
         guard bounds.width > 0, preferredMaxLayoutWidth != bounds.width else { return }
         preferredMaxLayoutWidth = bounds.width
+    }
+
+    override func sizeThatFits(_ size: CGSize) -> CGSize {
+        if size.width > 0 {
+            preferredMaxLayoutWidth = size.width
+        }
+        return super.sizeThatFits(size)
     }
 }
 
