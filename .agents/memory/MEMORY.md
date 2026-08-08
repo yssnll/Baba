@@ -1,2 +1,3 @@
 - [SwiftUI scroll-to-top controls](swiftui-scroll-to-top.md) — prefer an always-present overlay with a stable ScrollViewReader anchor over geometry-based visibility detection.
 - [iOS build environment](ios-build-environment.md) — compile and sign the native app and WidgetKit extension on macOS with Xcode.
+- [Riwayat du Livre](quran-riwayat.md) — ne jamais remplacer silencieusement une édition Warsh ou Khalaf par du texte Hafs.
