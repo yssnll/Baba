@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import Combine
+import WidgetKit
 
 /// Apparence de Tilawa.
 ///
@@ -61,6 +62,7 @@ final class AppearanceSettings: ObservableObject {
         if storedPreset == nil {
             applyPreset(.nocturne, save: false)
         }
+        syncWidgetAppearance()
     }
 
     var background: Color { Color(hex: backgroundHex) }
@@ -126,6 +128,22 @@ final class AppearanceSettings: ObservableObject {
         defaults.set(mutedHex, forKey: Keys.muted)
         defaults.set(successHex, forKey: Keys.success)
         defaults.set(dangerHex, forKey: Keys.danger)
+        syncWidgetAppearance()
+    }
+
+    /// Le widget est un autre processus : il ne peut pas lire UserDefaults.standard.
+    /// On recopie uniquement les couleurs publiques dans l'App Group partagé.
+    private func syncWidgetAppearance() {
+        guard let shared = UserDefaults(suiteName: TilawaSharedState.appGroup) else { return }
+        shared.set(backgroundHex, forKey: TilawaSharedState.appearanceBackground)
+        shared.set(surfaceHex, forKey: TilawaSharedState.appearanceSurface)
+        shared.set(accentHex, forKey: TilawaSharedState.appearanceAccent)
+        shared.set(goldHex, forKey: TilawaSharedState.appearanceGold)
+        shared.set(textHex, forKey: TilawaSharedState.appearanceText)
+        shared.set(mutedHex, forKey: TilawaSharedState.appearanceMuted)
+        shared.set(successHex, forKey: TilawaSharedState.appearanceSuccess)
+        shared.synchronize()
+        WidgetCenter.shared.reloadTimelines(ofKind: "TilawaWidget")
     }
 
     private enum Keys {

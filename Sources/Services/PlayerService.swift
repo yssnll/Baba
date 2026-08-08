@@ -63,6 +63,7 @@ final class PlayerService: NSObject, ObservableObject {
     private var artworkCache: [String: MPMediaItemArtwork] = [:]
     private let resumeKey = "tilawa.playback.resume"
     private var lastPersistedPosition = -1.0
+    private var lastWidgetSnapshotAt = Date.distantPast
 
     var hasQueue: Bool { !queue.isEmpty }
     var currentIndex: Int? { current.flatMap { c in queue.firstIndex(where: { $0.id == c.id }) } }
@@ -326,6 +327,10 @@ final class PlayerService: NSObject, ObservableObject {
                self.position - self.lastPersistedPosition >= 5 {
                 self.persistCurrentPosition()
             }
+            if !self.isScrubbing,
+               Date().timeIntervalSince(self.lastWidgetSnapshotAt) >= 15 {
+                self.updateWidgetSnapshot()
+            }
             if let d = self.player?.currentItem?.duration, d.isNumeric, d.seconds > 0 {
                 self.duration = d.seconds
             }
@@ -437,6 +442,7 @@ final class PlayerService: NSObject, ObservableObject {
 
     private func updateWidgetSnapshot() {
         guard let defaults = UserDefaults(suiteName: TilawaSharedState.appGroup) else { return }
+        lastWidgetSnapshotAt = Date()
         // Après un redémarrage, la dernière piste est d'abord dans
         // `pendingResume` avant que l'utilisateur ne relance la lecture.
         // Elle doit tout de même rester visible dans le widget.
@@ -455,7 +461,9 @@ final class PlayerService: NSObject, ObservableObject {
         defaults.set(current == nil ? (pendingResume?.position ?? position) : position,
                      forKey: TilawaSharedState.widgetPosition)
         defaults.set(duration, forKey: TilawaSharedState.widgetDuration)
-        WidgetCenter.shared.reloadAllTimelines()
+        defaults.set(Date().timeIntervalSince1970, forKey: TilawaSharedState.widgetUpdatedAt)
+        defaults.synchronize()
+        WidgetCenter.shared.reloadTimelines(ofKind: "TilawaWidget")
     }
 
     /// Vignette dessinée à la volée pour l'écran verrouillé : dégradé, rosette, numéro.

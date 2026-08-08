@@ -11,4 +11,15 @@ enum TilawaSharedState {
     static let widgetIsPlaying = "widget.is-playing"
     static let widgetPosition = "widget.position"
     static let widgetDuration = "widget.duration"
+    static let widgetUpdatedAt = "widget.updated-at"
+
+    // Palette recopiée dans l'App Group pour que l'extension WidgetKit
+    // reflète l'apparence choisie dans l'application.
+    static let appearanceBackground = "appearance.background"
+    static let appearanceSurface = "appearance.surface"
+    static let appearanceAccent = "appearance.accent"
+    static let appearanceGold = "appearance.gold"
+    static let appearanceText = "appearance.text"
+    static let appearanceMuted = "appearance.muted"
+    static let appearanceSuccess = "appearance.success"
 }
