@@ -54,6 +54,9 @@ struct QuranBookView: View {
             ScrollViewReader { scrollProxy in
                 ScrollView {
                     LazyVStack(spacing: 12) {
+                        Color.clear
+                            .frame(height: 0)
+                            .id("quran-book-top")
                         header
 
                         if let errorMessage = book.errorMessage {
@@ -69,8 +72,15 @@ struct QuranBookView: View {
                         } else {
                             TajweedLegend()
                                 .padding(.top, 2)
-                            QuranContinuousText(verses: book.verses)
+                            if selectedSurah?.number != 9 {
+                                QuranBasmala()
+                            }
+                            QuranContinuousText(
+                                verses: book.verses,
+                                surahNumber: selectedSurah?.number ?? selectedSurahNumber
+                            )
                                 .id("quran-continuous-text")
+                            bottomNavigation
                         }
                     }
                     .padding(.horizontal, 14)
@@ -82,6 +92,11 @@ struct QuranBookView: View {
                     guard !book.verses.isEmpty else { return }
                     withAnimation(.easeOut(duration: 0.35)) {
                         scrollProxy.scrollTo("quran-continuous-text", anchor: .top)
+                    }
+                }
+                .onChange(of: selectedSurahNumber) { _, _ in
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        scrollProxy.scrollTo("quran-book-top", anchor: .top)
                     }
                 }
             }
@@ -127,43 +142,134 @@ struct QuranBookView: View {
 
     private var controls: some View {
         VStack(spacing: 9) {
-            Menu {
-                ForEach(catalog.surahs) { surah in
-                    Button {
-                        selectedSurahNumber = surah.number
-                    } label: {
-                        Label(
-                            "\(surah.number). \(surah.nameFr) · \(surah.nameAr)",
-                            systemImage: selectedSurahNumber == surah.number
-                                ? "checkmark"
-                                : "book.closed"
-                        )
+            HStack(spacing: 7) {
+                surahNavigationButton(
+                    title: "Précédente",
+                    systemImage: "chevron.left",
+                    action: selectPreviousSurah
+                )
+                .disabled(previousSurah == nil)
+
+                Menu {
+                    ForEach(catalog.surahs) { surah in
+                        Button {
+                            selectedSurahNumber = surah.number
+                        } label: {
+                            Label(
+                                "\(surah.number). \(surah.nameFr) · \(surah.nameAr)",
+                                systemImage: selectedSurahNumber == surah.number
+                                    ? "checkmark"
+                                    : "book.closed"
+                            )
+                        }
                     }
+                } label: {
+                    surahPickerLabel
                 }
-            } label: {
-                HStack(spacing: 10) {
-                    SurahMedallion(number: selectedSurah?.number ?? selectedSurahNumber, side: 34)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(selectedSurah?.nameFr ?? "Sourate \(selectedSurahNumber)")
-                            .font(Theme.ui(14, .semibold))
-                            .foregroundStyle(Theme.ivory)
-                            .lineLimit(1)
-                        Text(selectedSurah?.nameAr ?? "السورة")
-                            .font(Theme.arabic(14))
-                            .foregroundStyle(Theme.gold.opacity(0.78))
-                    }
-                    Spacer(minLength: 4)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Theme.faint)
-                }
-                .padding(.horizontal, 11)
-                .padding(.vertical, 9)
-                .glass(radius: Theme.radiusPill, elevation: 0.55)
-            }
-            .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
             .disabled(catalog.surahs.isEmpty)
+
+                surahNavigationButton(
+                    title: "Suivante",
+                    systemImage: "chevron.right",
+                    action: selectNextSurah
+                )
+                .disabled(nextSurah == nil)
+            }
         }
+    }
+
+    private var surahPickerLabel: some View {
+        HStack(spacing: 8) {
+            SurahMedallion(number: selectedSurah?.number ?? selectedSurahNumber, side: 34)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(selectedSurah?.nameFr ?? "Sourate \(selectedSurahNumber)")
+                    .font(Theme.ui(14, .semibold))
+                    .foregroundStyle(Theme.ivory)
+                    .lineLimit(1)
+                Text(selectedSurah?.nameAr ?? "السورة")
+                    .font(Theme.arabic(14))
+                    .foregroundStyle(Theme.gold.opacity(0.78))
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Theme.faint)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .glass(radius: Theme.radiusPill, elevation: 0.55)
+    }
+
+    private func surahNavigationButton(
+        title: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 11, weight: .bold))
+                Text(title)
+                    .font(Theme.ui(9.5, .semibold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(Theme.gold)
+            .frame(minWidth: 52, minHeight: 47)
+            .padding(.horizontal, 2)
+            .background(Color.white.opacity(0.045))
+            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+        }
+        .buttonStyle(PressScale(scale: 0.95))
+        .accessibilityLabel(title)
+    }
+
+    private var bottomNavigation: some View {
+        HStack(spacing: 10) {
+            surahNavigationButton(
+                title: "Précédente",
+                systemImage: "chevron.left",
+                action: selectPreviousSurah
+            )
+            .disabled(previousSurah == nil)
+
+            Spacer(minLength: 0)
+
+            surahNavigationButton(
+                title: "Suivante",
+                systemImage: "chevron.right",
+                action: selectNextSurah
+            )
+            .disabled(nextSurah == nil)
+        }
+        .padding(.horizontal, 4)
+        .padding(.top, 2)
+        .padding(.bottom, 6)
+    }
+
+    private var currentSurahIndex: Int? {
+        catalog.surahs.firstIndex { $0.number == selectedSurahNumber }
+    }
+
+    private var previousSurah: Surah? {
+        guard let index = currentSurahIndex, index > 0 else { return nil }
+        return catalog.surahs[index - 1]
+    }
+
+    private var nextSurah: Surah? {
+        guard let index = currentSurahIndex, index + 1 < catalog.surahs.count
+        else { return nil }
+        return catalog.surahs[index + 1]
+    }
+
+    private func selectPreviousSurah() {
+        guard let previousSurah else { return }
+        selectedSurahNumber = previousSurah.number
+    }
+
+    private func selectNextSurah() {
+        guard let nextSurah else { return }
+        selectedSurahNumber = nextSurah.number
     }
 
     private var sourceNotice: some View {
@@ -245,13 +351,65 @@ struct QuranBookView: View {
     }
 }
 
+private struct QuranBasmala: View {
+    var body: some View {
+        Text("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ")
+            .font(Theme.arabic(25, .regular))
+            .foregroundStyle(Theme.goldSheen)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 14)
+            .background(Color.white.opacity(0.045))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Theme.gold.opacity(0.22), lineWidth: 0.7)
+            }
+            .accessibilityLabel("Basmala")
+    }
+}
+
 private struct QuranContinuousText: View {
     let verses: [QuranBookVerse]
+    let surahNumber: Int
+
+    private struct DisplayVerse: Identifiable {
+        let verse: QuranBookVerse
+        let displayedNumber: Int
+
+        var id: Int { verse.id }
+    }
+
+    private var displayVerses: [DisplayVerse] {
+        var result: [DisplayVerse] = []
+        for verse in verses {
+            // L'API Quran.com renvoie la basmala comme l'élément 1 de
+            // la Fatiha. Elle est déjà affichée au-dessus et ne doit donc
+            // pas réapparaître comme un verset numéroté.
+            if surahNumber == 1, verse.verseNumber == 1 {
+                continue
+            }
+
+            let displayedNumber = surahNumber == 1 && verse.verseNumber > 1
+                ? verse.verseNumber - 1
+                : verse.verseNumber
+            result.append(
+                DisplayVerse(verse: verse, displayedNumber: displayedNumber)
+            )
+        }
+        return result
+    }
 
     var body: some View {
         LazyVStack(alignment: .trailing, spacing: 15) {
-            ForEach(verses) { verse in
-                QuranVerseText(verse: verse)
+            ForEach(displayVerses) { item in
+                QuranVerseText(
+                    verse: item.verse,
+                    displayedNumber: item.displayedNumber == item.verse.verseNumber
+                        ? nil
+                        : item.displayedNumber
+                )
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
@@ -274,12 +432,41 @@ private struct QuranContinuousText: View {
 /// de se repositionner dans les sourates longues.
 private struct QuranVerseText: View {
     let verse: QuranBookVerse
+    let displayedNumber: Int?
 
     private var rawText: String {
         let text = verse.tajweedText ?? verse.plainText
-        return text.contains("<span class=end>")
-            ? text
-            : "\(text) <span class=end> ۝\(verse.verseNumber) </span>"
+        let number = displayedNumber ?? verse.verseNumber
+        let arabicNumber = number
+            .description
+            .replacingOccurrences(of: "0", with: "٠")
+            .replacingOccurrences(of: "1", with: "١")
+            .replacingOccurrences(of: "2", with: "٢")
+            .replacingOccurrences(of: "3", with: "٣")
+            .replacingOccurrences(of: "4", with: "٤")
+            .replacingOccurrences(of: "5", with: "٥")
+            .replacingOccurrences(of: "6", with: "٦")
+            .replacingOccurrences(of: "7", with: "٧")
+            .replacingOccurrences(of: "8", with: "٨")
+            .replacingOccurrences(of: "9", with: "٩")
+
+        guard let regex = try? NSRegularExpression(
+            pattern: #"<span class=end>.*?</span>"#,
+            options: [.dotMatchesLineSeparators]
+        ) else {
+            return "\(text) <span class=end> ۝\(arabicNumber) </span>"
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        guard let match = regex.firstMatch(in: text, options: [], range: range),
+              let matchRange = Range(match.range, in: text) else {
+            return "\(text) <span class=end> ۝\(arabicNumber) </span>"
+        }
+
+        return text.replacingCharacters(
+            in: matchRange,
+            with: "<span class=end> ۝\(arabicNumber) </span>"
+        )
     }
 
     var body: some View {

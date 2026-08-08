@@ -142,7 +142,11 @@ enum QuranBookService {
             QuranBookVerse(
                 id: ayah.number,
                 verseKey: "\(surahNumber):\(ayah.numberInSurah)",
-                textUthmani: ayah.text,
+                textUthmani: Self.removeFallbackBasmala(
+                    from: ayah.text,
+                    surahNumber: surahNumber,
+                    verseNumber: ayah.numberInSurah
+                ),
                 textUthmaniTajweed: nil
             )
         }
@@ -150,6 +154,23 @@ enum QuranBookService {
             throw ServiceError.emptyResponse
         }
         return verses
+    }
+
+    private static func removeFallbackBasmala(
+        from text: String,
+        surahNumber: Int,
+        verseNumber: Int
+    ) -> String {
+        guard surahNumber != 1, surahNumber != 9, verseNumber == 1 else {
+            return text.replacingOccurrences(of: "\u{FEFF}", with: "")
+        }
+
+        let cleanText = text.replacingOccurrences(of: "\u{FEFF}", with: "")
+        let basmala = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+        guard cleanText.hasPrefix(basmala) else { return cleanText }
+
+        return String(cleanText.dropFirst(basmala.count))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
 }
