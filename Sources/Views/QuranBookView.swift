@@ -467,6 +467,10 @@ private struct QuranContinuousText: View {
                 )
             }
         }
+            // Le layout doit lui-même recevoir toute la largeur disponible.
+            // Le placer seulement dans un frame externe étirait le fond,
+            // mais laissait le contenu calculé sur sa largeur intrinsèque.
+            .frame(maxWidth: .infinity, alignment: .trailing)
             .padding(.horizontal, 12)
             .padding(.vertical, 16)
             .background(colors.controlBackground)
