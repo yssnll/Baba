@@ -742,7 +742,7 @@ private struct QuranBookColors {
     }
 
     var heading: Color {
-        isLight ? Color(hex: 0x8A5B16) : Theme.goldSheen
+        isLight ? Color(hex: 0x8A5B16) : Theme.goldLight
     }
 
     var controlAccent: Color {
@@ -750,7 +750,7 @@ private struct QuranBookColors {
     }
 
     var buttonBackground: Color {
-        isLight ? Color(hex: 0xD5A83D) : Theme.goldSheen
+        isLight ? Color(hex: 0xD5A83D) : Theme.gold
     }
 
     var buttonText: Color {
