@@ -18,7 +18,6 @@ struct RootView: View {
             Group {
                 switch tab {
                 case .reciters: RecitersView()
-                case .book:     QuranBookView()
                 case .library:  LibraryView()
                 case .settings: SettingsView()
                 }
@@ -108,14 +107,13 @@ struct RootView: View {
 }
 
 enum MainTab: Int, CaseIterable, Identifiable {
-    case reciters, book, library, settings
+    case reciters, library, settings
 
     var id: Int { rawValue }
 
     var title: String {
         switch self {
         case .reciters: return "Récitateurs"
-        case .book:     return "Livre"
         case .library:  return "Hors ligne"
         case .settings: return "Réglages"
         }
@@ -123,7 +121,6 @@ enum MainTab: Int, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .reciters: return "person.wave.2"
-        case .book:     return "book.closed.fill"
         case .library:  return "arrow.down.circle"
         case .settings: return "slider.horizontal.3"
         }
@@ -133,7 +130,7 @@ enum MainTab: Int, CaseIterable, Identifiable {
 // MARK: - Barre principale
 
 /// Barre principale toujours visible. L'ordre est contractuel :
-/// Récitateurs → Livre → Hors ligne → Réglages.
+/// Récitateurs → Hors ligne → Réglages.
 
 struct MainTabBar: View {
     @Binding var selection: MainTab

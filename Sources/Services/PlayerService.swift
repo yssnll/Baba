@@ -446,22 +446,20 @@ final class PlayerService: NSObject, ObservableObject {
         // Après un redémarrage, la dernière piste est d'abord dans
         // `pendingResume` avant que l'utilisateur ne relance la lecture.
         // Elle doit tout de même rester visible dans le widget.
-        if let track = current ?? pendingResume?.track {
-            defaults.set("\(track.surah.number). \(track.surah.nameTranslit)", forKey: TilawaSharedState.widgetTitle)
-            defaults.set(track.reciterName, forKey: TilawaSharedState.widgetSubtitle)
-            defaults.set(track.reciterId, forKey: TilawaSharedState.widgetReciterID)
-            defaults.set(track.surah.number, forKey: TilawaSharedState.widgetSurahNumber)
-        } else {
-            defaults.removeObject(forKey: TilawaSharedState.widgetTitle)
-            defaults.removeObject(forKey: TilawaSharedState.widgetSubtitle)
-            defaults.removeObject(forKey: TilawaSharedState.widgetReciterID)
-            defaults.removeObject(forKey: TilawaSharedState.widgetSurahNumber)
-        }
-        defaults.set(isPlaying, forKey: TilawaSharedState.widgetIsPlaying)
-        defaults.set(current == nil ? (pendingResume?.position ?? position) : position,
-                     forKey: TilawaSharedState.widgetPosition)
-        defaults.set(duration, forKey: TilawaSharedState.widgetDuration)
-        defaults.set(Date().timeIntervalSince1970, forKey: TilawaSharedState.widgetUpdatedAt)
+        let sharedTrack = current ?? pendingResume?.track
+        let snapshot = TilawaWidgetSnapshot(
+            title: sharedTrack.map { "\($0.surah.number). \($0.surah.nameTranslit)" },
+            subtitle: sharedTrack?.reciterName,
+            hasTrack: sharedTrack != nil,
+            isPlaying: isPlaying,
+            position: current == nil ? (pendingResume?.position ?? position) : position,
+            duration: duration,
+            updatedAt: Date().timeIntervalSince1970
+        )
+        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        defaults.set(data, forKey: TilawaSharedState.widgetSnapshot)
+        // L'extension WidgetKit est un autre processus. `synchronize()` garantit
+        // que le snapshot complet est écrit avant de demander sa nouvelle timeline.
         defaults.synchronize()
         WidgetCenter.shared.reloadTimelines(ofKind: "TilawaWidget")
     }

@@ -1,6 +1,5 @@
 import SwiftUI
 import WidgetKit
-import MediaPlayer
 
 struct TilawaWidgetEntry: TimelineEntry {
     let date: Date
@@ -30,36 +29,31 @@ struct TilawaWidgetProvider: TimelineProvider {
     func getTimeline(in context: Context,
                      completion: @escaping (Timeline<TilawaWidgetEntry>) -> Void) {
         let entry = currentEntry()
-        // Les changements de lecture appellent reloadTimelines depuis l'app.
-        // Une politique `.never` évite qu'une ancienne entrée remplace l'état
-        // partagé avant que WidgetKit ait traité ce rechargement.
-        completion(Timeline(entries: [entry], policy: .never))
+        // L'application demande un rechargement à chaque changement d'état.
+        // Cette échéance est un filet de sécurité si WidgetKit retarde ou
+        // regroupe la demande de reload.
+        completion(
+            Timeline(
+                entries: [entry],
+                policy: .after(Date().addingTimeInterval(60))
+            )
+        )
     }
 
     private func currentEntry() -> TilawaWidgetEntry {
         let defaults = UserDefaults(suiteName: TilawaSharedState.appGroup)
-        let nowPlaying = MPNowPlayingInfoCenter.default().nowPlayingInfo
-        let sharedTitle = defaults?.string(forKey: TilawaSharedState.widgetTitle)
-        let sharedSubtitle = defaults?.string(forKey: TilawaSharedState.widgetSubtitle)
-        let nowPlayingTitle = nowPlaying?[MPMediaItemPropertyTitle] as? String
-        let nowPlayingArtist = nowPlaying?[MPMediaItemPropertyArtist] as? String
-        let title = sharedTitle ?? nowPlayingTitle
-        let subtitle = sharedSubtitle ?? nowPlayingArtist
-        let updatedAt = defaults?.double(forKey: TilawaSharedState.widgetUpdatedAt) ?? 0
-        let sharedIsPlaying = defaults?.object(forKey: TilawaSharedState.widgetIsPlaying) as? Bool
-        let playbackRate = nowPlaying?[MPNowPlayingInfoPropertyPlaybackRate] as? NSNumber
-        let elapsed = nowPlaying?[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? NSNumber
-        let playbackDuration = nowPlaying?[MPMediaItemPropertyPlaybackDuration] as? NSNumber
+        let snapshot = defaults?.data(forKey: TilawaSharedState.widgetSnapshot)
+            .flatMap { try? JSONDecoder().decode(TilawaWidgetSnapshot.self, from: $0) }
         return TilawaWidgetEntry(
-            date: updatedAt > 0 ? Date(timeIntervalSince1970: updatedAt) : Date(),
-            title: title ?? "Reprendre la lecture",
-            subtitle: subtitle ?? "Ouvre Tilawa pour commencer",
-            isPlaying: sharedIsPlaying ?? ((playbackRate?.doubleValue ?? 0) > 0),
-            hasTrack: title != nil,
-            position: defaults?.object(forKey: TilawaSharedState.widgetPosition) as? Double
-                ?? elapsed?.doubleValue ?? 0,
-            duration: defaults?.object(forKey: TilawaSharedState.widgetDuration) as? Double
-                ?? playbackDuration?.doubleValue ?? 0,
+            date: snapshot.map { Date(timeIntervalSince1970: $0.updatedAt) } ?? Date(),
+            title: snapshot?.hasTrack == true ? (snapshot?.title ?? "Récitation") : "Aucune lecture",
+            subtitle: snapshot?.hasTrack == true
+                ? (snapshot?.subtitle ?? "Prêt à reprendre")
+                : "Lance une récitation dans Tilawa",
+            isPlaying: snapshot?.isPlaying ?? false,
+            hasTrack: snapshot?.hasTrack ?? false,
+            position: snapshot?.position ?? 0,
+            duration: snapshot?.duration ?? 0,
             palette: TilawaWidgetPalette(defaults: defaults)
         )
     }

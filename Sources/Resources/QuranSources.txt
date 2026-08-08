@@ -1,8 +1,0 @@
-Source du lecteur « Livre »
-
-Hafs ‘an ‘Asim
-- Texte uthmani avec balises de tajwid : Quran.com API, endpoint
-  /api/v4/quran/verses/uthmani_tajweed.
-- Les versets sont regroupés en un flux continu pour une lecture linéaire.
-- Les balises de tajwid sont conservées et affichées avec la palette inspirée
-  de la légende fournie par l'utilisateur.

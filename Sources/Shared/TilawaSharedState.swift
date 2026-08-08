@@ -4,14 +4,7 @@ import Foundation
 /// Le catalogue et les fichiers audio ne quittent jamais le conteneur de l'app.
 enum TilawaSharedState {
     static let appGroup = "group.app.tilawa"
-    static let widgetTitle = "widget.title"
-    static let widgetSubtitle = "widget.subtitle"
-    static let widgetReciterID = "widget.reciter-id"
-    static let widgetSurahNumber = "widget.surah-number"
-    static let widgetIsPlaying = "widget.is-playing"
-    static let widgetPosition = "widget.position"
-    static let widgetDuration = "widget.duration"
-    static let widgetUpdatedAt = "widget.updated-at"
+    static let widgetSnapshot = "widget.snapshot"
 
     // Palette recopiée dans l'App Group pour que l'extension WidgetKit
     // reflète l'apparence choisie dans l'application.
@@ -22,4 +15,17 @@ enum TilawaSharedState {
     static let appearanceText = "appearance.text"
     static let appearanceMuted = "appearance.muted"
     static let appearanceSuccess = "appearance.success"
+}
+
+/// Snapshot atomique lu par l'extension WidgetKit.
+/// Un seul objet évite qu'un widget lise le titre d'une piste avec l'état
+/// lecture/pause de la piste précédente pendant une mise à jour.
+struct TilawaWidgetSnapshot: Codable {
+    let title: String?
+    let subtitle: String?
+    let hasTrack: Bool
+    let isPlaying: Bool
+    let position: Double
+    let duration: Double
+    let updatedAt: TimeInterval
 }
