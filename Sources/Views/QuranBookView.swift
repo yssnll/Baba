@@ -249,16 +249,11 @@ private struct QuranContinuousText: View {
     let verses: [QuranBookVerse]
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 0) {
-            TajweedText(rawValue: verses.map { verse in
-                let text = verse.tajweedText ?? verse.plainText
-                // Quran.com inclut déjà le marqueur du verset dans le texte
-                // tajwid. On ne l'ajoute que pour les réponses de secours.
-                return text.contains("<span class=end>")
-                    ? text
-                    : "\(text) <span class=end> ۝\(verse.verseNumber) </span>"
-            }.joined(separator: " "))
-            .frame(maxWidth: .infinity, alignment: .trailing)
+        LazyVStack(alignment: .trailing, spacing: 15) {
+            ForEach(verses) { verse in
+                QuranVerseText(verse: verse)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 20)
@@ -270,6 +265,27 @@ private struct QuranContinuousText: View {
         }
         .frame(maxWidth: .infinity)
         .environment(\.layoutDirection, .rightToLeft)
+    }
+}
+
+/// Un verset par cellule évite qu'une longue sourate devienne un seul
+/// UILabel géant. Chaque cellule reçoit sa propre largeur et sa propre
+/// hauteur, ce qui garde les versets dans l'ordre et empêche les fragments
+/// de se repositionner dans les sourates longues.
+private struct QuranVerseText: View {
+    let verse: QuranBookVerse
+
+    private var rawText: String {
+        let text = verse.tajweedText ?? verse.plainText
+        return text.contains("<span class=end>")
+            ? text
+            : "\(text) <span class=end> ۝\(verse.verseNumber) </span>"
+    }
+
+    var body: some View {
+        TajweedText(rawValue: rawText)
+            .padding(.horizontal, 2)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
