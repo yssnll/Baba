@@ -522,15 +522,19 @@ private struct QuranVerseFlowLayout: Layout {
         var y = bounds.minY
 
         for line in lines {
-            var x = bounds.maxX
+            var rightEdge = bounds.maxX
             for item in line.items {
-                x -= item.size.width
+                let x = rightEdge - item.size.width
                 subviews[item.index].place(
-                    at: CGPoint(x: x, y: y),
-                    anchor: .topLeading,
+                    // Coordonnées géométriques explicites : le premier
+                    // verset de chaque ligne est toujours ancré à droite,
+                    // sans dépendre de la résolution de "leading" par
+                    // SwiftUI dans un environnement RTL.
+                    at: CGPoint(x: x + item.size.width / 2, y: y),
+                    anchor: .top,
                     proposal: ProposedViewSize(item.size)
                 )
-                x -= spacing
+                rightEdge = x - spacing
             }
             y += line.height + lineSpacing
         }
