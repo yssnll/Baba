@@ -22,8 +22,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    MARKETING_VERSION: "3.5"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "3.6"
+    CURRENT_PROJECT_VERSION: "3"
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     # Le mode « minimal » évite les erreurs de concurrence stricte sur Xcode 16+
     SWIFT_STRICT_CONCURRENCY: minimal
@@ -66,8 +66,8 @@ targets:
       path: Support/Info.plist
       properties:
         CFBundleDisplayName: Tilawa
-        CFBundleShortVersionString: "3.5"
-        CFBundleVersion: "2"
+        CFBundleShortVersionString: "3.6"
+        CFBundleVersion: "3"
         UILaunchScreen: {}
         UIUserInterfaceStyle: Dark
         UIStatusBarStyle: UIStatusBarStyleLightContent
@@ -96,8 +96,8 @@ targets:
       base:
         PRODUCT_NAME: TilawaWidget
         PRODUCT_BUNDLE_IDENTIFIER: app.tilawa.player.TilawaWidget
-        MARKETING_VERSION: "3.5"
-        CURRENT_PROJECT_VERSION: "2"
+        MARKETING_VERSION: "3.6"
+        CURRENT_PROJECT_VERSION: "3"
         CODE_SIGN_ENTITLEMENTS: Sources/Widget/TilawaWidget.entitlements
         INFOPLIST_FILE: Sources/Widget/Info.plist
         APPLICATION_EXTENSION_API_ONLY: YES
