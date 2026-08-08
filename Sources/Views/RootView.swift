@@ -40,36 +40,6 @@ struct RootView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.canvas.ignoresSafeArea())
         .id(appearanceKey)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if tab != .book {
-                HStack {
-                    Spacer()
-                    Button {
-                        withAnimation(.spring(response: 0.34, dampingFraction: 0.76)) {
-                            tab = .book
-                        }
-                    } label: {
-                        Label("Livre", systemImage: "book.closed.fill")
-                            .font(Theme.ui(12, .semibold))
-                            .foregroundStyle(Theme.ivory)
-                            .padding(.horizontal, 13)
-                            .padding(.vertical, 9)
-                            .background(
-                                Capsule()
-                                    .fill(Theme.emerald.opacity(0.72))
-                                    .overlay(
-                                        Capsule()
-                                            .stroke(Theme.gold.opacity(0.45), lineWidth: 0.8)
-                                    )
-                            )
-                    }
-                    .buttonStyle(PressScale(scale: 0.96))
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 6)
-                .padding(.bottom, 4)
-            }
-        }
         // En inset de safe area : les listes gagnent automatiquement la marge
         // nécessaire et rien ne se retrouve caché sous le mini-lecteur.
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -78,7 +48,7 @@ struct RootView: View {
                     MiniPlayerView()
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                TabBar(selection: $tab)
+                MainTabBar(selection: $tab)
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 4)
@@ -160,14 +130,16 @@ enum MainTab: Int, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Barre d'onglets
+// MARK: - Barre principale
 
-struct TabBar: View {
+/// Barre principale toujours visible. L'ordre est contractuel :
+/// Récitateurs → Livre → Hors ligne → Réglages.
+
+struct MainTabBar: View {
     @Binding var selection: MainTab
-    @Namespace private var indicator
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             ForEach(MainTab.allCases) { tab in
                 Button {
                     guard selection != tab else { return }
@@ -177,13 +149,14 @@ struct TabBar: View {
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: tab.icon)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 17, weight: .semibold))
                         Text(tab.title)
-                            .font(Theme.ui(9.5, .semibold))
+                            .font(Theme.ui(10.5, .semibold))
+                            .lineLimit(1)
                     }
                     .foregroundStyle(selection == tab ? Theme.ivory : Theme.faint)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
+                    .padding(.vertical, 10)
                     .background {
                         if selection == tab {
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -192,15 +165,16 @@ struct TabBar: View {
                                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                                         .stroke(Theme.gold.opacity(0.30), lineWidth: 0.8)
                                 )
-                                .matchedGeometryEffect(id: "tab", in: indicator)
                         }
                     }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(tab.title)
+                .accessibilityIdentifier("main-tab-\(tab.rawValue)")
             }
         }
-        .padding(5)
+        .padding(6)
         .glass(radius: 20, elevation: 0.9)
     }
 }
