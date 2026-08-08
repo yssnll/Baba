@@ -1,22 +1,8 @@
-Sources du lecteur « Livre »
+Source du lecteur « Livre »
 
 Hafs ‘an ‘Asim
 - Texte uthmani avec balises de tajwid : Quran.com API, endpoint
   /api/v4/quran/verses/uthmani_tajweed.
-
-Warsh ‘an Nafi‘
-- Corpus texte Warsh embarqué depuis QuranWarshData :
-  https://github.com/SalahEddine-Ghannouch/QuranWarshData
-- Ce corpus suit la numérotation Warsh de sa source (6214 unités de versets).
-  L'application conserve cette numérotation et ne mélange pas les versets Hafs.
-
-Khalaf ‘an Hamzah
-- Mushaf PDF dédié Khalaf ‘an Hamzah, provenant du projet Khalaf Quran :
-  https://github.com/deccandewan/khalafquran
-- Projet distribué sous licence MIT. Le PDF est utilisé comme document de
-  lecture et n’est pas transformé en texte par l’application.
-
-Important
-- Les couleurs de tajwid sont affichées uniquement pour le corpus qui fournit
-  effectivement le balisage tajwid. L’application ne déduit pas de règles et
-  ne recolore pas artificiellement Warsh ou Khalaf.
+- Les versets sont regroupés en un flux continu pour une lecture linéaire.
+- Les balises de tajwid sont conservées et affichées avec la palette inspirée
+  de la légende fournie par l'utilisateur.

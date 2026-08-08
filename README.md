@@ -14,10 +14,10 @@ La version actuelle propose aussi :
 - des commandes Siri pour dire « Siri, mets la sourate Fatiha avec Yasser Dossari » ou « Siri, mets Muaqly » ;
 - un widget d'écran d'accueil en petite, moyenne ou grande taille pour reprendre, mettre en pause et passer à la sourate suivante ;
 - une sélection Siri de la sourate et du récitateur à partir du catalogue embarqué.
-- un onglet **Livre** entre **Récitateurs** et **Hors ligne**, avec sélection de
-  Hafs, Warsh et Khalaf ‘an Hamzah ;
-- une lecture Hafs avec balises de tajwid fournies par Quran.com, un corpus
-  Warsh dédié hors connexion et un mushaf PDF Khalaf ‘an Hamzah dédié.
+- un onglet **Livre** entre **Récitateurs** et **Hors ligne**, consacré au Coran
+  Hafs ‘an ‘Asim ;
+- une lecture Hafs linéaire, avec balises de tajwid fournies par Quran.com et
+  une palette de couleurs correspondant à la légende du mushaf.
 
 Pour les widgets, Siri et la lecture depuis l'écran verrouillé, l'application doit être signée avec un compte Apple configuré pour l'App Group `group.app.tilawa`.
 
@@ -175,8 +175,7 @@ Sources/
   Design/       Theme, LiquidGlass, IslamicPattern, Components
   Services/     Storage, CatalogStore, DownloadManager, PlayerService
   Views/        Root, Reciters, ReciterDetail, NowPlaying, Library, Settings
-  Resources/    reciters.json (281 Ko), surahs.json (15 Ko), warsh_surahs.json,
-                khalaf.pdf, QuranSources.txt
+  Resources/    reciters.json (281 Ko), surahs.json (15 Ko), QuranSources.txt
   Assets.xcassets/  icône (Rub el Hizb doré), couleur d'accent
 ```
 

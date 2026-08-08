@@ -1,7 +1,5 @@
 import SwiftUI
-import PDFKit
 import Combine
-import UIKit
 
 @MainActor
 final class QuranBookStore: ObservableObject {
@@ -9,9 +7,6 @@ final class QuranBookStore: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var loadedSurahNumber: Int?
-    @Published private(set) var loadedRiwaya: QuranBookRiwaya?
-    @Published private(set) var pdfURL: URL?
-    @Published private(set) var initialPDFPage: Int?
 
     private var loadTask: Task<Void, Never>?
 
@@ -19,26 +14,20 @@ final class QuranBookStore: ObservableObject {
         loadTask?.cancel()
     }
 
-    func load(surahNumber: Int, riwaya: QuranBookRiwaya) {
+    func load(surahNumber: Int) {
         loadTask?.cancel()
         isLoading = true
         errorMessage = nil
         verses = []
-        pdfURL = nil
-        initialPDFPage = nil
 
         loadTask = Task { [weak self] in
             do {
                 let document = try await QuranBookService.load(
-                    surahNumber: surahNumber,
-                    riwaya: riwaya
+                    surahNumber: surahNumber
                 )
                 try Task.checkCancellation()
                 self?.verses = document.verses
-                self?.pdfURL = document.pdfURL
-                self?.initialPDFPage = document.initialPDFPage
                 self?.loadedSurahNumber = surahNumber
-                self?.loadedRiwaya = riwaya
                 self?.isLoading = false
             } catch is CancellationError {
                 return
@@ -54,11 +43,6 @@ struct QuranBookView: View {
     @EnvironmentObject private var catalog: CatalogStore
     @StateObject private var book = QuranBookStore()
     @AppStorage("tilawa.book.surah") private var selectedSurahNumber = 1
-    @AppStorage("tilawa.book.riwaya") private var selectedRiwayaRaw = QuranBookRiwaya.hafs.rawValue
-
-    private var selectedRiwaya: QuranBookRiwaya {
-        QuranBookRiwaya(rawValue: selectedRiwayaRaw) ?? .hafs
-    }
 
     private var selectedSurah: Surah? {
         catalog.surah(selectedSurahNumber) ?? catalog.surahs.first
@@ -75,13 +59,6 @@ struct QuranBookView: View {
                             errorState(errorMessage)
                         } else if book.isLoading {
                             loadingState
-                        } else if let pdfURL = book.pdfURL {
-                            QuranPDFReader(
-                                url: pdfURL,
-                                initialPage: book.initialPDFPage ?? 1
-                            )
-                            .frame(minHeight: 680)
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         } else if book.verses.isEmpty {
                             EmptyStateView(
                                 icon: "book.closed",
@@ -89,18 +66,10 @@ struct QuranBookView: View {
                                 message: "Le texte vérifié de la sourate apparaîtra ici."
                             )
                         } else {
-                            if selectedRiwaya.hasVerifiedTajweedMarkup {
-                                TajweedLegend()
-                                    .padding(.top, 2)
-                            }
-
-                            ForEach(book.verses) { verse in
-                                QuranVerseCard(
-                                    verse: verse,
-                                    riwaya: selectedRiwaya
-                                )
-                                .id(verse.id)
-                            }
+                            TajweedLegend()
+                                .padding(.top, 2)
+                            QuranContinuousText(verses: book.verses)
+                                .id("quran-continuous-text")
                         }
                     }
                     .padding(.horizontal, 14)
@@ -109,9 +78,9 @@ struct QuranBookView: View {
                 .scrollIndicators(.hidden)
                 .background(Color.clear)
                 .onChange(of: book.verses.count) { _, _ in
-                    guard let first = book.verses.first else { return }
+                    guard !book.verses.isEmpty else { return }
                     withAnimation(.easeOut(duration: 0.35)) {
-                        scrollProxy.scrollTo(first.id, anchor: .top)
+                        scrollProxy.scrollTo("quran-continuous-text", anchor: .top)
                     }
                 }
             }
@@ -126,9 +95,6 @@ struct QuranBookView: View {
         .onChange(of: selectedSurahNumber) { _, _ in
             loadCurrentSelection()
         }
-        .onChange(of: selectedRiwayaRaw) { _, _ in
-            loadCurrentSelection()
-        }
     }
 
     private var header: some View {
@@ -138,7 +104,7 @@ struct QuranBookView: View {
                     Text("Livre")
                         .font(Theme.display(28, .bold))
                         .foregroundStyle(Theme.goldSheen)
-                    Text("Le Coran · \(selectedRiwaya.shortTitle)")
+                    Text("Le Coran · Hafs")
                         .font(Theme.ui(11.5, .regular))
                         .foregroundStyle(Theme.faint)
                 }
@@ -196,53 +162,15 @@ struct QuranBookView: View {
             }
             .buttonStyle(.plain)
             .disabled(catalog.surahs.isEmpty)
-
-            ScrollView(.horizontal) {
-                HStack(spacing: 7) {
-                    ForEach(QuranBookRiwaya.allCases) { riwaya in
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                selectedRiwayaRaw = riwaya.rawValue
-                            }
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: riwaya.icon)
-                                    .font(.system(size: 10, weight: .semibold))
-                                Text(riwaya.shortTitle)
-                                    .font(Theme.ui(11, .semibold))
-                            }
-                            .foregroundStyle(selectedRiwaya == riwaya ? Theme.night : Theme.muted)
-                            .padding(.horizontal, 11)
-                            .padding(.vertical, 8)
-                            .background {
-                                if selectedRiwaya == riwaya {
-                                    Capsule().fill(Theme.goldSheen)
-                                } else {
-                                    Capsule()
-                                        .fill(Color.white.opacity(0.055))
-                                        .overlay(
-                                            Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.7)
-                                        )
-                                }
-                            }
-                        }
-                        .buttonStyle(PressScale(scale: 0.97))
-                    }
-                }
-                .padding(.vertical, 1)
-            }
-            .scrollIndicators(.hidden)
         }
     }
 
     private var sourceNotice: some View {
         HStack(alignment: .top, spacing: 8) {
-            Image(systemName: selectedRiwaya.hasVerifiedTajweedMarkup
-                  ? "checkmark.seal.fill"
-                  : "info.circle.fill")
+            Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(selectedRiwaya.hasVerifiedTajweedMarkup ? Theme.emerald : Theme.gold)
-            Text(selectedRiwaya.sourceDescription)
+                .foregroundStyle(Theme.emerald)
+            Text(QuranBookRiwaya.hafs.sourceDescription)
                 .font(Theme.ui(10.5, .regular))
                 .foregroundStyle(Theme.faint)
                 .fixedSize(horizontal: false, vertical: true)
@@ -297,47 +225,28 @@ struct QuranBookView: View {
 
     private func loadCurrentSelection() {
         guard catalog.surah(selectedSurahNumber) != nil else { return }
-        book.load(surahNumber: selectedSurahNumber, riwaya: selectedRiwaya)
+        book.load(surahNumber: selectedSurahNumber)
     }
 }
 
-private struct QuranVerseCard: View {
-    let verse: QuranBookVerse
-    let riwaya: QuranBookRiwaya
+private struct QuranContinuousText: View {
+    let verses: [QuranBookVerse]
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 12) {
-            HStack {
-                Text(verse.verseKey)
-                    .font(Theme.mono(10, .medium))
-                    .foregroundStyle(Theme.gold.opacity(0.7))
-                Spacer()
-                Text("\(verse.verseNumber)")
-                    .font(Theme.mono(10, .semibold))
-                    .foregroundStyle(Theme.night)
-                    .frame(width: 25, height: 25)
-                    .background(Circle().fill(Theme.goldSheen))
-            }
-
-            if riwaya.hasVerifiedTajweedMarkup, let tajweedText = verse.tajweedText {
-                TajweedText(rawValue: tajweedText)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            } else {
-                Text(verse.plainText)
-                    .font(Theme.arabic(23, .regular))
-                    .foregroundStyle(Theme.ivory)
-                    .lineSpacing(12)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 14)
+        TajweedText(rawValue: verses.map { verse in
+            let text = verse.tajweedText ?? verse.plainText
+            return "\(text) <span class=end> ۝\(verse.verseNumber) </span>"
+        }.joined(separator: " "))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 20)
         .background(Color.white.opacity(0.045))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 0.7)
         }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.horizontal, 14)
         .environment(\.layoutDirection, .rightToLeft)
     }
 }
@@ -396,24 +305,22 @@ private struct TajweedText: View {
 
     private func color(for className: String) -> Color {
         switch className {
-        case "ham_wasl", "laam_shamsiyah":
-            return Theme.ivory.opacity(0.72)
-        case "madda_normal", "madda_permissible":
-            return Color(hex: 0x63D8A6)
+        case "madda_normal":
+            return TajweedPalette.maddTwo
+        case "madda_permissible":
+            return TajweedPalette.maddTwoFourSix
         case "madda_obligatory":
-            return Color(hex: 0x38BDF8)
+            return TajweedPalette.maddFive
+        case "madda_necessary":
+            return TajweedPalette.maddSix
         case "qalaqah":
-            return Color(hex: 0xF26D78)
-        case "idgham_ghunnah", "idgham_shafawi":
-            return Color(hex: 0xC084FC)
-        case "ikhfa", "ikhfa_shafawi":
-            return Color(hex: 0xF5B86A)
-        case "iqlab":
-            return Color(hex: 0xFB8C60)
-        case "idgham":
-            return Color(hex: 0x4DD4C0)
-        case "ghunnah":
-            return Color(hex: 0x60A5FA)
+            return TajweedPalette.qalqalah
+        case "ham_wasl", "laam_shamsiyah", "idgham", "idgham_shafawi":
+            return TajweedPalette.silent
+        case "ikhfa", "ikhfa_shafawi", "iqlab", "ghunnah", "idgham_ghunnah":
+            return TajweedPalette.ikhfaGhunnah
+        case "tafkhim":
+            return TajweedPalette.tafkhim
         case "end":
             return Theme.gold
         default:
@@ -430,10 +337,14 @@ private struct TajweedLegend: View {
     }
 
     private let items: [LegendItem] = [
-        LegendItem(id: "madd", title: "Madd", color: Color(hex: 0x63D8A6)),
-        LegendItem(id: "qalqalah", title: "Qalqalah", color: Color(hex: 0xF26D78)),
-        LegendItem(id: "idgham", title: "Idgham", color: Color(hex: 0xC084FC)),
-        LegendItem(id: "ikhfa", title: "Ikhfa / Iqlab", color: Color(hex: 0xF5B86A))
+        LegendItem(id: "maddSix", title: "Madd 6 · obligatoire", color: TajweedPalette.maddSix),
+        LegendItem(id: "maddFive", title: "Madd 5 · wajib", color: TajweedPalette.maddFive),
+        LegendItem(id: "maddTwoFourSix", title: "Madd 2/4/6 · permis", color: TajweedPalette.maddTwoFourSix),
+        LegendItem(id: "maddTwo", title: "Madd 2/4", color: TajweedPalette.maddTwo),
+        LegendItem(id: "ikhfa", title: "Ikhfa · ghunnah", color: TajweedPalette.ikhfaGhunnah),
+        LegendItem(id: "silent", title: "Idgham · non prononcé", color: TajweedPalette.silent),
+        LegendItem(id: "tafkhim", title: "Tafkhim", color: TajweedPalette.tafkhim),
+        LegendItem(id: "qalqalah", title: "Qalqalah", color: TajweedPalette.qalqalah)
     ]
 
     var body: some View {
@@ -459,26 +370,13 @@ private struct TajweedLegend: View {
     }
 }
 
-private struct QuranPDFReader: UIViewRepresentable {
-    let url: URL
-    let initialPage: Int
-
-    func makeUIView(context: Context) -> PDFView {
-        let pdfView = PDFView()
-        pdfView.autoScales = true
-        pdfView.displayMode = .singlePageContinuous
-        pdfView.displayDirection = .vertical
-        pdfView.backgroundColor = .black
-        pdfView.document = PDFDocument(url: url)
-        return pdfView
-    }
-
-    func updateUIView(_ pdfView: PDFView, context: Context) {
-        guard let document = pdfView.document else { return }
-        let index = max(0, min(initialPage - 1, document.pageCount - 1))
-        guard let page = document.page(at: index) else { return }
-        DispatchQueue.main.async {
-            pdfView.go(to: page)
-        }
-    }
+private enum TajweedPalette {
+    static let maddSix = Color(hex: 0x8E3D68)
+    static let maddFive = Color(hex: 0xC65A73)
+    static let maddTwoFourSix = Color(hex: 0xB86B59)
+    static let maddTwo = Color(hex: 0xC7834B)
+    static let ikhfaGhunnah = Color(hex: 0x3D9B77)
+    static let silent = Color(hex: 0x9AA3A7)
+    static let tafkhim = Color(hex: 0x347E92)
+    static let qalqalah = Color(hex: 0x218FC4)
 }

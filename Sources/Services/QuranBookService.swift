@@ -20,18 +20,8 @@ enum QuranBookService {
         }
     }
 
-    static func load(surahNumber: Int, riwaya: QuranBookRiwaya) async throws -> QuranBookDocument {
-        switch riwaya {
-        case .warsh:
-            return try loadBundledWarsh(surahNumber: surahNumber)
-        case .khalaf:
-            guard let url = Bundle.main.url(forResource: "khalaf", withExtension: "pdf") else {
-                throw ServiceError.invalidResponse
-            }
-            return .pdf(url: url, page: pageNumber(for: surahNumber))
-        case .hafs:
-            return .verses(try await loadHafs(surahNumber: surahNumber))
-        }
+    static func load(surahNumber: Int) async throws -> QuranBookDocument {
+        .verses(try await loadHafs(surahNumber: surahNumber))
     }
 
     private static func loadHafs(surahNumber: Int) async throws -> [QuranBookVerse] {
@@ -65,40 +55,4 @@ enum QuranBookService {
         return verses
     }
 
-    private static func loadBundledWarsh(surahNumber: Int) throws -> QuranBookDocument {
-        guard let url = Bundle.main.url(forResource: "warsh_surahs", withExtension: "json"),
-              let data = try? Data(contentsOf: url)
-        else {
-            throw ServiceError.invalidResponse
-        }
-
-        let surahs = try JSONDecoder().decode([WarshSurah].self, from: data)
-        guard let surah = surahs.first(where: { $0.id == surahNumber }) else {
-            throw ServiceError.emptyResponse
-        }
-
-        let verses = surah.ayahs.map { ayah in
-            QuranBookVerse(
-                id: ayah.id,
-                verseKey: "\(ayah.surah):\(ayah.number)",
-                textUthmani: ayah.text,
-                textUthmaniTajweed: nil
-            )
-        }
-        guard !verses.isEmpty else {
-            throw ServiceError.emptyResponse
-        }
-        return .verses(verses)
-    }
-
-    private static func pageNumber(for surahNumber: Int) -> Int {
-        guard let url = Bundle.main.url(forResource: "surahs", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let catalog = try? JSONDecoder().decode(SurahCatalogFile.self, from: data),
-              let surah = catalog.surahs.first(where: { $0.number == surahNumber })
-        else {
-            return 1
-        }
-        return max(1, surah.page)
-    }
 }

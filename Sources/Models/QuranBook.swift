@@ -1,53 +1,22 @@
 import Foundation
 
-/// Les éditions de texte disponibles dans le lecteur du mushaf.
-/// Le serveur Quran.com fournit actuellement un balisage tajwid complet pour
-/// l'édition uthmani utilisée ici pour Hafs. Les autres éditions restent
-/// distinctes et sont affichées sans coloration inventée.
-enum QuranBookRiwaya: String, CaseIterable, Codable, Identifiable {
+/// Le lecteur du mushaf utilise uniquement le texte Hafs ‘an ‘Asim.
+/// Quran.com fournit pour cette édition le balisage tajwid vérifié.
+enum QuranBookRiwaya: String, Codable, Identifiable {
     case hafs
-    case warsh
-    case khalaf
 
     var id: String { rawValue }
 
-    var title: String {
-        switch self {
-        case .hafs: return "Hafs ‘an ‘Asim"
-        case .warsh: return "Warsh ‘an Nafi‘"
-        case .khalaf: return "Khalaf ‘an Hamzah"
-        }
-    }
+    var title: String { "Hafs ‘an ‘Asim" }
 
-    var shortTitle: String {
-        switch self {
-        case .hafs: return "Hafs"
-        case .warsh: return "Warsh"
-        case .khalaf: return "Khalaf"
-        }
-    }
+    var shortTitle: String { "Hafs" }
 
-    var icon: String {
-        switch self {
-        case .hafs: return "sparkles"
-        case .warsh: return "book.closed"
-        case .khalaf: return "book.closed.fill"
-        }
-    }
+    var icon: String { "sparkles" }
 
-    var hasVerifiedTajweedMarkup: Bool {
-        self == .hafs
-    }
+    var hasVerifiedTajweedMarkup: Bool { true }
 
     var sourceDescription: String {
-        switch self {
-        case .hafs:
-            return "Texte uthmani avec balisage tajwid fourni par Quran.com."
-        case .warsh:
-            return "Texte Warsh dédié, embarqué pour une lecture hors connexion. Le balisage tajwid couleur n'est pas fourni par cette édition."
-        case .khalaf:
-            return "Mushaf PDF dédié à Khalaf ‘an Hamzah, embarqué pour une lecture hors connexion."
-        }
+        "Texte uthmani Hafs avec balisage tajwid vérifié fourni par Quran.com."
     }
 }
 
@@ -81,28 +50,10 @@ struct QuranBookResponse: Decodable {
     let verses: [QuranBookVerse]
 }
 
-struct WarshSurah: Decodable {
-    let id: Int
-    let ayahs: [WarshAyah]
-}
-
-struct WarshAyah: Decodable {
-    let id: Int
-    let number: Int
-    let surah: String
-    let text: String
-}
-
 struct QuranBookDocument {
     let verses: [QuranBookVerse]
-    let pdfURL: URL?
-    let initialPDFPage: Int?
 
     static func verses(_ verses: [QuranBookVerse]) -> QuranBookDocument {
-        QuranBookDocument(verses: verses, pdfURL: nil, initialPDFPage: nil)
-    }
-
-    static func pdf(url: URL, page: Int) -> QuranBookDocument {
-        QuranBookDocument(verses: [], pdfURL: url, initialPDFPage: page)
+        QuranBookDocument(verses: verses)
     }
 }
