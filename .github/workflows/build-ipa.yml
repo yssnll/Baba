@@ -53,6 +53,16 @@ jobs:
             echo "::error::L'extension WidgetKit n'est pas embarquée dans Tilawa.app"
             exit 1
           }
+          WIDGET_PLIST="$APP/PlugIns/TilawaWidget.appex/Info.plist"
+          test -f "$WIDGET_PLIST" || {
+            echo "::error::Info.plist du widget introuvable"
+            exit 1
+          }
+          WIDGET_NAME="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$WIDGET_PLIST" 2>/dev/null || true)"
+          test -n "$WIDGET_NAME" || {
+            echo "::error::CFBundleName manquant dans l'Info.plist du widget"
+            exit 1
+          }
           mkdir -p Payload
           cp -R "$APP" Payload/
           # Une IPA est simplement un zip contenant un dossier Payload/
