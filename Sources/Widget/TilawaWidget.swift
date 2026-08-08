@@ -240,6 +240,24 @@ struct TilawaWidgetPalette {
     let muted: Color
     let success: Color
 
+    private init(
+        background: Color,
+        surface: Color,
+        accent: Color,
+        gold: Color,
+        text: Color,
+        muted: Color,
+        success: Color
+    ) {
+        self.background = background
+        self.surface = surface
+        self.accent = accent
+        self.gold = gold
+        self.text = text
+        self.muted = muted
+        self.success = success
+    }
+
     static let fallback = TilawaWidgetPalette(
         background: Color(hex: "#100D19"),
         surface: Color(hex: "#211A2D"),
