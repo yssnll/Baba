@@ -240,10 +240,11 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.ivory)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
-                .background(
+                .background {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(player.widgetSyncIsAvailable ? Theme.accent : Theme.muted.opacity(0.35))
-                )
+                        .fill(Theme.accent)
+                        .opacity(player.widgetSyncIsAvailable ? 1 : 0.35)
+                }
             }
             .buttonStyle(PressScale())
         }
