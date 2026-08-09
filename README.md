@@ -53,6 +53,11 @@ valide. La version actuelle écrit le snapshot dans un fichier atomique partagé
 réveille l'application pour les commandes du widget, ce qui évite les états bloqués
 lorsqu'iOS suspend l'app.
 
+Après installation, ouvre **Réglages → Widget** dans Tilawa. Le statut doit afficher
+`App Group active · group.app.tilawa`. Si l'écran affiche `App Group absente`, le
+problème vient de la signature eSign et non du lecteur : il faut choisir un profil
+qui autorise cette App Group pour l'application et l'extension.
+
 **3. Les récitations ne sont pas embarquées dans l'app.** C'est un choix, pas un oubli — voir *Le modèle hors ligne*.
 
 ---

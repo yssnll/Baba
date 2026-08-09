@@ -74,6 +74,14 @@ final class PlayerService: NSObject, ObservableObject {
         return DownloadManager.shared.isDownloaded(recitationId: c.recitation.id, surah: c.surah.number)
     }
 
+    var widgetSyncIsAvailable: Bool {
+        TilawaSharedState.isAppGroupAvailable
+    }
+
+    var widgetSyncStatus: String {
+        TilawaSharedState.availabilityMessage
+    }
+
     private override init() {
         super.init()
         configureSession()

@@ -46,14 +46,19 @@ struct TilawaWidgetProvider: TimelineProvider {
     private func currentEntry() -> TilawaWidgetEntry {
         let defaults = TilawaSharedState.sharedDefaults
         let snapshot = TilawaSharedState.readSnapshot()
+        let appGroupAvailable = TilawaSharedState.isAppGroupAvailable
         return TilawaWidgetEntry(
             date: snapshot.map { Date(timeIntervalSince1970: $0.updatedAt) } ?? Date(),
-            title: snapshot?.hasTrack == true ? (snapshot?.title ?? "Récitation") : "Aucune lecture",
-            subtitle: snapshot?.hasTrack == true
-                ? (snapshot?.subtitle ?? "Prêt à reprendre")
-                : "Lance une récitation dans Tilawa",
-            isPlaying: snapshot?.isPlaying ?? false,
-            hasTrack: snapshot?.hasTrack ?? false,
+            title: !appGroupAvailable
+                ? "Signature requise"
+                : (snapshot?.hasTrack == true ? (snapshot?.title ?? "Récitation") : "Aucune lecture"),
+            subtitle: !appGroupAvailable
+                ? "App Group absente"
+                : (snapshot?.hasTrack == true
+                    ? (snapshot?.subtitle ?? "Prêt à reprendre")
+                    : "Lance une récitation dans Tilawa"),
+            isPlaying: appGroupAvailable && (snapshot?.isPlaying ?? false),
+            hasTrack: appGroupAvailable && (snapshot?.hasTrack ?? false),
             position: snapshot?.position ?? 0,
             duration: snapshot?.duration ?? 0,
             updatedAt: snapshot?.updatedAt ?? Date().timeIntervalSince1970,

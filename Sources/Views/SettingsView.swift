@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var catalog: CatalogStore
     @EnvironmentObject private var downloads: DownloadManager
+    @EnvironmentObject private var player: PlayerService
     @ObservedObject private var appearance = AppearanceSettings.shared
 
     @State private var showAddReciter = false
@@ -21,6 +22,7 @@ struct SettingsView: View {
             LazyVStack(spacing: 10) {
                 header
                 appearanceCard
+                widgetCard
                 catalogCard
                 networkCard
                 storageCard
@@ -189,6 +191,59 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
                 .glass(radius: 14, elevation: 0.55)
+            }
+            .buttonStyle(PressScale())
+        }
+    }
+
+    private var widgetCard: some View {
+        card {
+            SectionHeader(
+                title: "Widget",
+                subtitle: "État du partage avec l'écran d'accueil"
+            )
+
+            Label(
+                player.widgetSyncIsAvailable
+                    ? "Synchronisation disponible"
+                    : "Synchronisation indisponible",
+                systemImage: player.widgetSyncIsAvailable
+                    ? "checkmark.circle.fill"
+                    : "exclamationmark.triangle.fill"
+            )
+            .font(Theme.ui(12, .semibold))
+            .foregroundStyle(player.widgetSyncIsAvailable ? Theme.emerald : Theme.danger)
+
+            Text(player.widgetSyncStatus)
+                .font(Theme.mono(10, .regular))
+                .foregroundStyle(Theme.faint)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(
+                player.widgetSyncIsAvailable
+                    ? "L'état de la piste et de la lecture est partagé avec TilawaWidget."
+                    : "eSign a probablement retiré l'App Group. Signe l'app et TilawaWidget avec le même profil contenant group.app.tilawa."
+            )
+            .font(Theme.ui(10.5, .regular))
+            .foregroundStyle(Theme.faint)
+            .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                player.refreshWidgetSnapshot()
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("Tester la synchronisation")
+                        .font(Theme.ui(13, .semibold))
+                }
+                .foregroundStyle(Theme.ivory)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(player.widgetSyncIsAvailable ? Theme.accent : Theme.muted.opacity(0.35))
+                )
             }
             .buttonStyle(PressScale())
         }

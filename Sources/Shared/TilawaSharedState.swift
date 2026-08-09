@@ -30,11 +30,21 @@ enum TilawaSharedState {
     }
 
     static var sharedDefaults: UserDefaults? {
-        UserDefaults(suiteName: appGroup)
+        // `suiteName` peut parfois créer une instance même quand l'entitlement
+        // manque dans une IPA re-signée. Le conteneur est le vrai test.
+        guard sharedContainerURL != nil else { return nil }
+        return UserDefaults(suiteName: appGroup)
     }
 
     static var isAppGroupAvailable: Bool {
         sharedContainerURL != nil && sharedDefaults != nil
+    }
+
+    static var availabilityMessage: String {
+        if isAppGroupAvailable {
+            return "App Group active · \(appGroup)"
+        }
+        return "App Group absente · l'IPA doit être re-signée avec \(appGroup)"
     }
 
     static var snapshotURL: URL? {
