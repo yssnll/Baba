@@ -40,6 +40,19 @@ La première compilation peut donc encore révéler des erreurs (un type, un arg
 
 **2. Le widget nécessite une IPA signée.** Une IPA non signée peut servir à vérifier que le bundle est construit, mais elle ne peut pas activer l'App Group `group.app.tilawa`. Pour utiliser le widget, ouvre le projet sur un Mac avec Xcode, choisis la même équipe Apple pour `Tilawa` et `TilawaWidget`, puis active l'App Group `group.app.tilawa` pour les deux cibles. Le script accepte aussi `DEVELOPMENT_TEAM=TON_EQUIPE ./build-ipa.sh` et exporte alors une IPA signée si les profils sont disponibles. Un compte Apple Developer payant est nécessaire pour les App Groups.
 
+Avec **eSign**, signe l'IPA complète, pas uniquement `Tilawa.app` :
+
+1. conserve `Payload/Tilawa.app/PlugIns/TilawaWidget.appex` dans l'IPA ;
+2. signe l'application principale et `TilawaWidget.appex` avec la même équipe ;
+3. conserve l'entitlement `com.apple.security.application-groups` dans les deux binaires ;
+4. vérifie que sa valeur est exactement `group.app.tilawa` dans les deux cas.
+
+Si eSign remplace ou retire cet entitlement, le widget affichera toujours son état initial :
+aucun code ne peut partager des données entre l'app et l'extension sans un App Group
+valide. La version actuelle écrit le snapshot dans un fichier atomique partagé et
+réveille l'application pour les commandes du widget, ce qui évite les états bloqués
+lorsqu'iOS suspend l'app.
+
 **3. Les récitations ne sont pas embarquées dans l'app.** C'est un choix, pas un oubli — voir *Le modèle hors ligne*.
 
 ---

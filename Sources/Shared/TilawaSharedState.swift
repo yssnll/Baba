@@ -7,6 +7,8 @@ enum TilawaSharedState {
     static let appGroup = "group.app.tilawa"
     static let widgetSnapshot = "widget.snapshot"
     static let widgetCommand = "widget.command"
+    static let widgetKind = "TilawaWidget"
+    private static let snapshotFilename = "widget-snapshot.json"
 
     // Palette recopiée dans l'App Group pour que l'extension WidgetKit
     // reflète l'apparence choisie dans l'application.
@@ -17,6 +19,67 @@ enum TilawaSharedState {
     static let appearanceText = "appearance.text"
     static let appearanceMuted = "appearance.muted"
     static let appearanceSuccess = "appearance.success"
+
+    /// Retourne le conteneur partagé uniquement si l'entitlement App Group est
+    /// réellement présent dans le binaire signé. Cette vérification permet de
+    /// distinguer un problème de code d'un problème de re-signature eSign.
+    static var sharedContainerURL: URL? {
+        FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroup
+        )
+    }
+
+    static var sharedDefaults: UserDefaults? {
+        UserDefaults(suiteName: appGroup)
+    }
+
+    static var isAppGroupAvailable: Bool {
+        sharedContainerURL != nil && sharedDefaults != nil
+    }
+
+    static var snapshotURL: URL? {
+        sharedContainerURL?.appendingPathComponent(snapshotFilename)
+    }
+
+    /// Écrit d'abord un fichier atomique dans le conteneur partagé. UserDefaults
+    /// reste un repli pour les installations plus anciennes et pour éviter
+    /// qu'un widget déjà en cache ne perde son état pendant la migration.
+    @discardableResult
+    static func writeSnapshot(_ snapshot: TilawaWidgetSnapshot) -> Bool {
+        guard let data = try? JSONEncoder().encode(snapshot) else { return false }
+
+        var didWrite = false
+        if let url = snapshotURL {
+            do {
+                try data.write(to: url, options: [.atomic])
+                didWrite = true
+            } catch {
+                didWrite = false
+            }
+        }
+
+        if let defaults = sharedDefaults {
+            defaults.set(data, forKey: widgetSnapshot)
+            defaults.synchronize()
+            didWrite = true
+        }
+        return didWrite
+    }
+
+    static func readSnapshot() -> TilawaWidgetSnapshot? {
+        if let url = snapshotURL,
+           let data = try? Data(contentsOf: url),
+           let snapshot = try? JSONDecoder().decode(
+               TilawaWidgetSnapshot.self, from: data
+           ) {
+            return snapshot
+        }
+
+        guard let data = sharedDefaults?.data(forKey: widgetSnapshot) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(TilawaWidgetSnapshot.self, from: data)
+    }
 }
 
 /// Snapshot atomique lu par l'extension WidgetKit.
@@ -52,12 +115,12 @@ struct TilawaWidgetCommand: Codable {
 
 enum TilawaWidgetCommandStore {
     static func send(_ action: TilawaWidgetCommandAction) {
-        guard let defaults = UserDefaults(suiteName: TilawaSharedState.appGroup),
+        guard let defaults = TilawaSharedState.sharedDefaults,
               let data = try? JSONEncoder().encode(TilawaWidgetCommand(action: action))
         else { return }
 
         defaults.set(data, forKey: TilawaSharedState.widgetCommand)
         defaults.synchronize()
-        WidgetCenter.shared.reloadTimelines(ofKind: "TilawaWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: TilawaSharedState.widgetKind)
     }
 }

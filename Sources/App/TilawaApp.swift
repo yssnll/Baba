@@ -45,7 +45,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         DownloadManager.shared.bootstrap()
+        // Initialise le snapshot après le chargement du singleton. Cela
+        // couvre le cas où l'app est lancée par une commande du widget.
+        PlayerService.shared.refreshWidgetSnapshot()
         return true
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        PlayerService.shared.refreshWidgetSnapshot()
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

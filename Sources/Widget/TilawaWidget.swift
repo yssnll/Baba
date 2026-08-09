@@ -44,9 +44,8 @@ struct TilawaWidgetProvider: TimelineProvider {
     }
 
     private func currentEntry() -> TilawaWidgetEntry {
-        let defaults = UserDefaults(suiteName: TilawaSharedState.appGroup)
-        let snapshot = defaults?.data(forKey: TilawaSharedState.widgetSnapshot)
-            .flatMap { try? JSONDecoder().decode(TilawaWidgetSnapshot.self, from: $0) }
+        let defaults = TilawaSharedState.sharedDefaults
+        let snapshot = TilawaSharedState.readSnapshot()
         return TilawaWidgetEntry(
             date: snapshot.map { Date(timeIntervalSince1970: $0.updatedAt) } ?? Date(),
             title: snapshot?.hasTrack == true ? (snapshot?.title ?? "Récitation") : "Aucune lecture",
@@ -268,7 +267,10 @@ struct TilawaWidgetView: View {
 
 struct TilawaTogglePlaybackIntent: AppIntent {
     static let title: LocalizedStringResource = "Lire ou mettre en pause"
-    static let openAppWhenRun = false
+    // Les commandes sont consommées par PlayerService dans l'application
+    // principale. Il faut donc réveiller cette application si iOS l'a
+    // suspendue, notamment après une installation signée par eSign.
+    static let openAppWhenRun = true
 
     func perform() async throws -> some IntentResult {
         TilawaWidgetCommandStore.send(.toggle)
@@ -278,7 +280,7 @@ struct TilawaTogglePlaybackIntent: AppIntent {
 
 struct TilawaResumePlaybackIntent: AppIntent {
     static let title: LocalizedStringResource = "Reprendre la lecture"
-    static let openAppWhenRun = false
+    static let openAppWhenRun = true
 
     func perform() async throws -> some IntentResult {
         TilawaWidgetCommandStore.send(.toggle)
@@ -288,7 +290,7 @@ struct TilawaResumePlaybackIntent: AppIntent {
 
 struct TilawaPreviousTrackIntent: AppIntent {
     static let title: LocalizedStringResource = "Sourate précédente"
-    static let openAppWhenRun = false
+    static let openAppWhenRun = true
 
     func perform() async throws -> some IntentResult {
         TilawaWidgetCommandStore.send(.previous)
@@ -298,7 +300,7 @@ struct TilawaPreviousTrackIntent: AppIntent {
 
 struct TilawaNextTrackIntent: AppIntent {
     static let title: LocalizedStringResource = "Sourate suivante"
-    static let openAppWhenRun = false
+    static let openAppWhenRun = true
 
     func perform() async throws -> some IntentResult {
         TilawaWidgetCommandStore.send(.next)

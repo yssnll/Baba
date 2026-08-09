@@ -461,7 +461,7 @@ final class PlayerService: NSObject, ObservableObject {
     }
 
     private func processWidgetCommand() {
-        guard let defaults = UserDefaults(suiteName: TilawaSharedState.appGroup),
+        guard let defaults = TilawaSharedState.sharedDefaults,
               let data = defaults.data(forKey: TilawaSharedState.widgetCommand),
               let command = try? JSONDecoder().decode(
                 TilawaWidgetCommand.self, from: data
@@ -494,7 +494,6 @@ final class PlayerService: NSObject, ObservableObject {
     }
 
     private func updateWidgetSnapshot() {
-        guard let defaults = UserDefaults(suiteName: TilawaSharedState.appGroup) else { return }
         lastWidgetSnapshotAt = Date()
         // Après un redémarrage, la dernière piste est d'abord dans
         // `pendingResume` avant que l'utilisateur ne relance la lecture.
@@ -509,12 +508,14 @@ final class PlayerService: NSObject, ObservableObject {
             duration: duration,
             updatedAt: Date().timeIntervalSince1970
         )
-        guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        defaults.set(data, forKey: TilawaSharedState.widgetSnapshot)
-        // L'extension WidgetKit est un autre processus. `synchronize()` garantit
-        // que le snapshot complet est écrit avant de demander sa nouvelle timeline.
-        defaults.synchronize()
-        WidgetCenter.shared.reloadTimelines(ofKind: "TilawaWidget")
+        guard TilawaSharedState.writeSnapshot(snapshot) else { return }
+        // L'extension WidgetKit est un autre processus. Le fichier atomique
+        // garantit que le widget ne lit jamais un snapshot partiellement écrit.
+        // `reloadAllTimelines` est volontairement utilisé ici : certaines
+        // versions d'iOS/eSign ne rafraîchissent pas toujours un kind isolé
+        // après la re-signature de l'extension.
+        WidgetCenter.shared.reloadTimelines(ofKind: TilawaSharedState.widgetKind)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Vignette dessinée à la volée pour l'écran verrouillé : dégradé, rosette, numéro.

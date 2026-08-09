@@ -134,7 +134,7 @@ final class AppearanceSettings: ObservableObject {
     /// Le widget est un autre processus : il ne peut pas lire UserDefaults.standard.
     /// On recopie uniquement les couleurs publiques dans l'App Group partagé.
     private func syncWidgetAppearance() {
-        guard let shared = UserDefaults(suiteName: TilawaSharedState.appGroup) else { return }
+        guard let shared = TilawaSharedState.sharedDefaults else { return }
         shared.set(backgroundHex, forKey: TilawaSharedState.appearanceBackground)
         shared.set(surfaceHex, forKey: TilawaSharedState.appearanceSurface)
         shared.set(accentHex, forKey: TilawaSharedState.appearanceAccent)
@@ -143,7 +143,8 @@ final class AppearanceSettings: ObservableObject {
         shared.set(mutedHex, forKey: TilawaSharedState.appearanceMuted)
         shared.set(successHex, forKey: TilawaSharedState.appearanceSuccess)
         shared.synchronize()
-        WidgetCenter.shared.reloadTimelines(ofKind: "TilawaWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: TilawaSharedState.widgetKind)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private enum Keys {
